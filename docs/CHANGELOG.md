@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+- [新功能] 新增每日选股落库与次日（T+1）验证：A 股、美股各取前 N 名写入 `screening_picks`，取选股日后首个交易日收盘价判定「上涨且跑赢基准」，结果写入 `screening_verifications`；配套 `main.py --screen-picks` / `--verify-picks` 与 `/api/v1/pick-verification` 接口，每日调度结束后自动执行。
+
+- [新功能] 新增选股验证看板页面 `/pick-verification`，按选股日展示各市场候选、入场价、T+1 收盘、收益/基准/超额与命中率、胜率、平均收益等汇总指标。
+
+- [新功能] 每日选股与验证结果可推送到已配置的通知渠道（含企业微信），由 `SCREENING_PICKS_NOTIFY_ENABLED` 控制，推送失败不阻断选股流程。
+
+- [新功能] 新增美股选股策略 `us_blue_chip_momentum`，美股市场纳入每日选股范围；选股策略按 `market_scope` 与市场匹配，避免用 A 股策略跑美股。
+
+- [改进] 美股选股与次日验证数据源改为国内可直连的腾讯报价接口与新浪美股 K 线，不再依赖 Yahoo Finance（机房 IP 会被 429 限流，代理无法绕过），指数基准 `^GSPC` / `^IXIC` / `^DJI` 自动映射为新浪 symbol。
+
+- [改进] 看板部署 compose 指定 `ENV_FILE` 指向 data 卷内的运行期配置文件，使 `ADMIN_AUTH_ENABLED` 等需要以文件形式读取的开关在 Docker 下可正常启用（`env_file` 只注入变量，宿主机 `.env` 又不适合单文件挂载）。
+
+- [修复] 每日选股同一天同一市场只保留一份结果，重复运行整体跳过写入，避免多次运行选出的不同候选叠加后超过 Top N 且 rank 重复。
+
+- [文档] 为每日选股与次日验证补充服务器部署章节：compose/容器形态、`.env` 模板、宿主机 crontab、端口与安全组、数据源可达性与额度实测、常见排障与回滚步骤。
+
 - [修复] ETF 轮动按真实 A 股交易日历保留全池缺报价日期及末尾缺口，防止调仓顺延、周末信号提前和动量窗口缩短；历史日历不可用时明确停止计算。
 
 - [修复] ETF 轮动回测在行情缺口后结算完整持仓损益，缺报价日不虚构成交，防守资产缺报价时使用现金；统一参数扫描与主回测的行情处理，限定前复权来源，并跳过无关个股列表校验。
