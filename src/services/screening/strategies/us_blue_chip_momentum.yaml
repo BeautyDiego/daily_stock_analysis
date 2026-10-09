@@ -1,0 +1,55 @@
+# Derived from AlphaSift revision 9f522747caafd3c0b1ddb7e14d5cf44c8580b6cf.
+# Licensed under Apache-2.0 and modified for daily_stock_analysis.
+# 美股大盘动量策略
+#
+# 与 A 股策略的差异（重要）：
+# 1. market_scope 为 [us]，走 snapshot_us（yfinance）取数；
+# 2. 不使用 pe / pb / 换手率 相关硬过滤 —— 美股快照的估值字段依赖
+#    yfinance info 补充，缺失时会把候选全部过滤掉；
+# 3. 不启用依赖日 K 的过滤条件（ma20 / macd / rsi / 20 日特征等），
+#    避免对美股代码走 A 股日线源取数失败。
+name: us_blue_chip_momentum
+display_name: 美股大盘动量
+description: 面向美股大盘股的动量与流动性候选发现
+version: "1.0"
+category: framework
+tags: [momentum, liquidity, us, llm_friendly]
+analysis_skills: [bull_trend, growth_quality]
+style:
+  risk_profile: balanced
+  holding_period: swing
+  execution_style: trend_quality
+  market_regime: [risk_on, trend, rotation]
+  capital_profile: high_liquidity
+  ui_badge: 美股
+
+screening:
+  enabled: true
+  market_scope: [us]
+  hard_filters:
+    exclude_st: false
+    amount_min: 20000000
+    market_cap_min: 5000000000
+    change_pct_min: -8.0
+    change_pct_max: 12.0
+    price_min: 5
+  tech_weight: 0.55
+  factor_weights:
+    momentum: 0.40
+    liquidity: 0.20
+    activity: 0.20
+    stability: 0.10
+    size: 0.10
+  scoring_profile:
+    activity_ideal_volume_ratio: 1.8
+    stability_hot_change_pct: 5.0
+  risk_profile:
+    chase_change_pct: 10.0
+    abnormal_volume_ratio: 6.0
+    low_llm_confidence: 0.50
+  ranking_hints: |
+    优先关注：
+    1. 成交额与市值足够大的美股大盘股，避免流动性风险
+    2. 动量已经启动但尚未进入极端追涨阶段的候选
+    3. 兼顾不同行业，避免集中在单一主题
+  max_output: 5

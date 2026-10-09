@@ -29,6 +29,7 @@ const DecisionSignalsPage = lazy(() => import('./pages/DecisionSignalsPage'));
 const AlertsPage = lazy(() => import('./pages/AlertsPage'));
 const TokenUsagePage = lazy(() => import('./pages/TokenUsagePage'));
 const StockScreeningPage = lazy(() => import('./pages/StockScreeningPage'));
+const PickVerificationPage = lazy(() => import('./pages/PickVerificationPage'));
 const DataCenterPage = lazy(() => import('./pages/DataCenterPage'));
 
 const AppContent: React.FC = () => {
@@ -93,6 +94,7 @@ const routeChildren = [
   { path: '/portfolio', element: <PortfolioPage /> },
   { path: '/decision-signals', element: <DecisionSignalsPage /> },
   { path: '/screening', element: <StockScreeningPage /> },
+  { path: '/pick-verification', element: <PickVerificationPage /> },
   { path: '/data', element: <DataCenterPage /> },
   { path: '/backtest', element: <BacktestPage /> },
   { path: '/alerts', element: <AlertsPage /> },

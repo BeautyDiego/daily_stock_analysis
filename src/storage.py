@@ -335,6 +335,88 @@ class ScreeningRun(Base):
     )
 
 
+class ScreeningPick(Base):
+    """每日选股落库记录。
+
+    与 screening_runs 的区别：screening_runs 保存整次运行的原始响应，
+    本表只保留入选的 Top N，供次日验证与看板直接消费。
+    """
+
+    __tablename__ = 'screening_picks'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    run_id = Column(String(64), nullable=False, index=True)
+    pick_date = Column(Date, nullable=False, index=True)
+    market = Column(String(8), nullable=False, index=True)
+    strategy = Column(String(64), index=True)
+
+    code = Column(String(16), nullable=False, index=True)
+    name = Column(String(64))
+    rank = Column(Integer, nullable=False, default=0)
+
+    entry_price = Column(Float)
+    final_score = Column(Float)
+    ranking_reason = Column(Text)
+
+    created_at = Column(DateTime, default=datetime.now, index=True)
+
+    __table_args__ = (
+        UniqueConstraint('run_id', 'code', name='uix_screening_pick_run_code'),
+        Index('ix_screening_pick_date_market', 'pick_date', 'market'),
+    )
+
+
+class ScreeningVerification(Base):
+    """选股次日（T+1）验证结果。
+
+    判定口径：T+1 收盘相对入场价上涨，且跑赢对应市场基准指数。
+    """
+
+    __tablename__ = 'screening_verifications'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    pick_id = Column(
+        Integer,
+        ForeignKey('screening_picks.id'),
+        nullable=False,
+        index=True,
+    )
+
+    # 冗余字段，便于按代码/市场/日期筛选，避免看板查询回表
+    code = Column(String(16), nullable=False, index=True)
+    market = Column(String(8), nullable=False, index=True)
+    pick_date = Column(Date, nullable=False, index=True)
+    verify_date = Column(Date, nullable=False, index=True)
+
+    # 个股表现
+    entry_price = Column(Float)
+    close_price = Column(Float)
+    return_pct = Column(Float)
+
+    # 基准表现（cn=上证指数, us=标普500，取自 market_profile.mood_index_code）
+    benchmark_code = Column(String(16))
+    benchmark_open = Column(Float)
+    benchmark_close = Column(Float)
+    benchmark_return_pct = Column(Float)
+    excess_return_pct = Column(Float)
+
+    # 判定结果
+    is_up = Column(Boolean, nullable=True)
+    beat_benchmark = Column(Boolean, nullable=True)
+    met_expectation = Column(Boolean, nullable=True)  # 上涨 且 跑赢基准
+
+    eval_status = Column(String(16), nullable=False, default='pending')  # pending/done/error/insufficient
+    error_message = Column(Text)
+    verified_at = Column(DateTime, default=datetime.now, index=True)
+
+    __table_args__ = (
+        UniqueConstraint('pick_id', 'verify_date', name='uix_screening_verify_pick_date'),
+        Index('ix_screening_verify_date_market', 'verify_date', 'market'),
+    )
+
+
 class AnalysisHistory(Base):
     """
     分析结果历史记录模型

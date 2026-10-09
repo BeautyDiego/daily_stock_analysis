@@ -80,9 +80,12 @@ def test_bundled_strategies_are_loaded_from_the_internal_package() -> None:
         "oversold_reversal",
         "quality_value",
         "shrink_pullback",
+        "us_blue_chip_momentum",
         "volume_breakout",
     }
     assert strategies["dual_low"].screening.factor_weights["value"] < 0.40
+    # 美股策略必须声明美股市场范围，否则会被选股管线拒绝
+    assert strategies["us_blue_chip_momentum"].screening.market_scope == ["us"]
 
 
 def test_list_strategies_preserves_legacy_strategies_dir_override() -> None:

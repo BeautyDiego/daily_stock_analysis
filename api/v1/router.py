@@ -23,6 +23,7 @@ from api.v1.endpoints import (
     health,
     history,
     intelligence,
+    pick_verification,
     portfolio,
     stocks,
     system_config,
@@ -103,6 +104,12 @@ router.include_router(
     screening.router,
     prefix="/screening",
     tags=["Screening"]
+)
+
+router.include_router(
+    pick_verification.router,
+    prefix="/pick-verification",
+    tags=["PickVerification"]
 )
 
 router.include_router(

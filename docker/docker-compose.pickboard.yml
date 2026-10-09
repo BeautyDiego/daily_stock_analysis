@@ -1,0 +1,53 @@
+# ===================================
+# 选股验证看板 - 部署用 Compose
+# ===================================
+# 与仓库自带 docker-compose.yml 的区别：
+# 1. 单服务同时提供 Web 看板与每日调度（--serve）
+# 2. 端口固定由 PICKBOARD_PORT 控制，默认 8000
+# 3. 不依赖仓库根目录的 data/logs/reports，全部使用容器内命名卷，
+#    避免在部署机上散落目录
+#
+# 用法：
+#   cp .env.example .env   # 至少配置 SCREENING_ENABLED / 定时任务 / 通知渠道
+#   docker compose -f docker/docker-compose.pickboard.yml up -d --build
+
+name: dsa-pickboard
+
+services:
+  pickboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: dsa-pickboard:latest
+    container_name: dsa-pickboard
+    restart: unless-stopped
+    # --serve-only：只起 Web / API，不触发整体 AI 分析；
+    # 每日选股与次日验证由宿主机 cron 调用容器内的 main.py 完成。
+    command: ["python", "main.py", "--serve-only", "--host", "0.0.0.0", "--port", "${PICKBOARD_PORT:-8000}"]
+    ports:
+      - "${PICKBOARD_PORT:-8000}:${PICKBOARD_PORT:-8000}"
+    env_file:
+      - ../.env
+    environment:
+      - TZ=Asia/Shanghai
+      - WEBUI_HOST=0.0.0.0
+      - WEBUI_ENABLED=true
+      - API_PORT=${PICKBOARD_PORT:-8000}
+      # 运行期活跃配置文件：鉴权等开关需要「文件」形式读取（env_file 只注入变量），
+      # 而宿主机 .env 不能单文件挂载（会破坏写入时的 os.replace 原子替换），
+      # 因此指向 data 卷内的可写文件，容器重建后仍保留。
+      - ENV_FILE=/app/data/runtime.env
+    volumes:
+      - pickboard-data:/app/data
+      - pickboard-logs:/app/logs
+      - pickboard-reports:/app/reports
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  pickboard-data:
+  pickboard-logs:
+  pickboard-reports:

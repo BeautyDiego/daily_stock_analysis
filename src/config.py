@@ -947,6 +947,12 @@ class Config:
     # === Built-in stock screening ===
     screening_enabled: bool = False
 
+    # === 每日选股与次日验证 ===
+    # 每个市场每日入选的只数（A 股 / 美股各自独立取前 N）
+    screening_picks_top_n: int = 5
+    # 是否推送选股 / 验证结果到已配置的通知渠道（企业微信等）
+    screening_picks_notify_enabled: bool = True
+
     # === AI 分析配置 ===
     generation_backend: str = LITELLM_BACKEND_ID
     generation_fallback_backend: str = LITELLM_BACKEND_ID
@@ -2377,6 +2383,16 @@ class Config:
             ),
             portfolio_fx_update_enabled=os.getenv('PORTFOLIO_FX_UPDATE_ENABLED', 'true').lower() == 'true',
             screening_enabled=parse_env_bool(os.getenv('SCREENING_ENABLED'), default=False),
+            screening_picks_top_n=parse_env_int(
+                os.getenv('SCREENING_PICKS_TOP_N'),
+                5,
+                field_name='SCREENING_PICKS_TOP_N',
+                minimum=1,
+                maximum=20,
+            ),
+            screening_picks_notify_enabled=parse_env_bool(
+                os.getenv('SCREENING_PICKS_NOTIFY_ENABLED'), default=True
+            ),
         )
     
     @classmethod

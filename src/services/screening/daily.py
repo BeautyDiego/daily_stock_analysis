@@ -178,14 +178,17 @@ def fetch_daily_history(
 ) -> pd.DataFrame:
     """Fetch daily history for one stock code.
 
-    ``source`` accepts ``tencent``, ``sina``, ``akshare``, ``baostock``, ``tushare``,
-    ``yfinance`` or ``auto``. ``auto`` prefers Tushare when a token is
-    configured, then Tencent's direct HTTP K-line endpoint before wrapper-based
-    free sources. Without a token it starts with Tencent. Sina is a second
-    direct HTTP K-line source before wrapper-based fallbacks. ``yfinance`` is
-    explicit-only (never part of ``auto``) and expects a US ticker rather than
-    an A-share code. Lagging bars do not stop the auto fallback chain; they are
-    retained for degraded use only if no source provides fresh history.
+    ``source`` accepts ``tencent``, ``sina``, ``sina_us``, ``akshare``,
+    ``baostock``, ``tushare``, ``yfinance`` or ``auto``. ``auto`` prefers
+    Tushare when a token is configured, then Tencent's direct HTTP K-line
+    endpoint before wrapper-based free sources. Without a token it starts with
+    Tencent. Sina is a second direct HTTP K-line source before wrapper-based
+    fallbacks. ``sina_us`` serves US tickers (and US indices) from Sina's US
+    K-line endpoint and is the default source for the US market.
+    ``yfinance`` is explicit-only (never part of ``auto``) and expects a US
+    ticker rather than an A-share code. Lagging bars do not stop the auto
+    fallback chain; they are retained for degraded use only if no source
+    provides fresh history.
     """
     normalized_code = _normalize_daily_code(code)
     normalized_lookback_days = int(lookback_days)
@@ -197,7 +200,7 @@ def fetch_daily_history(
             else ("tencent", "sina", "akshare", "baostock")
         )
         sources, source_order_notes = _rank_daily_sources_by_health(sources)
-    elif src in ("akshare", "baostock", "tushare", "tencent", "sina", "yfinance"):
+    elif src in ("akshare", "baostock", "tushare", "tencent", "sina", "sina_us", "yfinance"):
         sources = (src,)
         source_order_notes = []
     else:
@@ -225,7 +228,15 @@ def fetch_daily_history(
             continue
         for attempt in range(attempts):
             try:
-                if current == "yfinance":
+                if current == "sina_us":
+                    from src.services.screening.snapshot_us import fetch_daily_history_us_sina
+                    result = _call_daily_wrapper(
+                        fetch_daily_history_us_sina,
+                        current,
+                        code,
+                        lookback_days=lookback_days,
+                    )
+                elif current == "yfinance":
                     from src.services.screening.snapshot_us import fetch_daily_history_yfinance
                     result = _call_daily_wrapper(
                         fetch_daily_history_yfinance,

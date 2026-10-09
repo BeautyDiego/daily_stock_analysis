@@ -311,6 +311,8 @@ def parse_arguments() -> argparse.Namespace:
   python main.py --schedule         # 启用定时任务模式
   python main.py --market-review    # 仅运行大盘复盘
   python main.py --etf-rotation     # ETF 轮动：最新信号 + 规则回测报告
+  python main.py --screen-picks     # 每日选股：A 股 / 美股各 Top N 落库
+  python main.py --verify-picks     # 次日验证：校验已入库选股的 T+1 表现
         '''
     )
 
@@ -470,6 +472,39 @@ def parse_arguments() -> argparse.Namespace:
         '--etf-rotation',
         action='store_true',
         help='运行 ETF 轮动：输出最新调仓信号与规则回测报告（不调用 LLM，配置见 ETF_ROTATION_*）'
+    )
+
+    # === 每日选股与次日验证 ===
+    parser.add_argument(
+        '--screen-picks',
+        action='store_true',
+        help='运行每日选股，把各市场 Top N 写入选股表（配置见 SCREENING_PICKS_TOP_N）'
+    )
+
+    parser.add_argument(
+        '--verify-picks',
+        action='store_true',
+        help='对已入库的选股做次日（T+1）验证：上涨且跑赢基准'
+    )
+
+    parser.add_argument(
+        '--picks-market',
+        type=str,
+        default=None,
+        help='限定选股/验证的市场，逗号分隔，例如 cn,us'
+    )
+
+    parser.add_argument(
+        '--picks-top',
+        type=int,
+        default=None,
+        help='每个市场取前几名，默认使用 SCREENING_PICKS_TOP_N'
+    )
+
+    parser.add_argument(
+        '--verify-force',
+        action='store_true',
+        help='强制重算已验证的选股记录'
     )
 
     return parser.parse_args()
@@ -797,6 +832,43 @@ def _run_auto_backtest(config: Config) -> None:
         logger.warning(f"自动回测失败（已忽略）: {exc}")
 
 
+def _run_auto_screening_picks(config: Config) -> None:
+    """每日调度时自动选股并验证前一批选股。
+
+    先验证（兑现昨日的判断），再选股（生成今日的候选），与自动回测同样
+    遵循「失败不拖垮主流程」的语义。未开启 SCREENING_ENABLED 时直接跳过。
+    """
+
+    try:
+        if not getattr(config, 'screening_enabled', False):
+            return
+
+        from src.services.screening_verification_service import (
+            ScreeningVerificationService,
+        )
+
+        service = ScreeningVerificationService()
+
+        verify_stats = service.verify_picks()
+        logger.info(
+            f"自动选股验证完成: processed={verify_stats.get('processed')} "
+            f"done={verify_stats.get('done')} insufficient={verify_stats.get('insufficient')} "
+            f"errors={verify_stats.get('errors')}"
+        )
+        service.notify_verification_result()
+
+        pick_stats = service.run_daily_picks(
+            max_results=int(getattr(config, 'screening_picks_top_n', 5)),
+        )
+        logger.info(
+            f"自动选股完成: saved={pick_stats.get('saved')} "
+            f"skipped={pick_stats.get('skipped')} markets={pick_stats.get('markets')}"
+        )
+        service.notify_daily_picks()
+    except Exception as exc:
+        logger.warning(f"自动选股失败（已忽略）: {exc}")
+
+
 def run_full_analysis(
     config: Config,
     args: argparse.Namespace,
@@ -830,6 +902,7 @@ def run_full_analysis(
             "本轮跳过个股分析和大盘复盘。"
         )
         _run_auto_backtest(config)
+        _run_auto_screening_picks(config)
         return True
 
     # Import pipeline modules outside the broad try/except so that import-time
@@ -842,6 +915,7 @@ def run_full_analysis(
 
     def _return_with_auto_backtest(result: bool) -> bool:
         _run_auto_backtest(config)
+        _run_auto_screening_picks(config)
         return result
 
     try:
@@ -1449,7 +1523,8 @@ def _skips_stock_entry(args: argparse.Namespace, config: Config) -> bool:
     ``--stocks``/``STOCK_LIST`` tokens nor refresh the stock-index registry
     before the mode dispatch, otherwise an unsupported index token would
     wrongly block a run that never consumes it. Covered modes:
-    ``--backtest``, ``--market-review``, ``--etf-rotation``, ``--serve-only``/``--webui-only``,
+    ``--backtest``, ``--market-review``, ``--etf-rotation``, ``--screen-picks``,
+    ``--verify-picks``, ``--serve-only``/``--webui-only``,
     ``--portfolio`` (any value) and ``--schedule``/``config.schedule_enabled``.
     ``--serve`` (not serve-only) and plain one-shot runs still consume the
     stock list and stay outside the guard. The webui-only flag is read
@@ -1459,6 +1534,8 @@ def _skips_stock_entry(args: argparse.Namespace, config: Config) -> bool:
     return bool(
         getattr(args, "backtest", False)
         or getattr(args, "etf_rotation", False)
+        or getattr(args, "screen_picks", False)
+        or getattr(args, "verify_picks", False)
         or getattr(args, "market_review", False)
         or getattr(args, "serve_only", False)
         or getattr(args, "webui_only", False)
@@ -1767,6 +1844,58 @@ def main() -> int:
                 "ETF 轮动完成: as_of=%s target=%s failed=%s",
                 f"{report.as_of:%Y-%m-%d}", report.target_weights, list(report.failed_codes),
             )
+            return 0
+
+        # 模式0.6: 每日选股落库
+        if getattr(args, 'screen_picks', False):
+            logger.info("模式: 每日选股落库")
+            from src.services.screening_verification_service import (
+                ScreeningVerificationService,
+            )
+
+            market_arg = getattr(args, 'picks_market', None)
+            markets = (
+                [item.strip() for item in str(market_arg).split(',') if item.strip()]
+                if market_arg
+                else None
+            )
+            service = ScreeningVerificationService()
+            stats = service.run_daily_picks(
+                markets=markets,
+                max_results=int(
+                    getattr(args, 'picks_top', None)
+                    or getattr(config, 'screening_picks_top_n', 5)
+                ),
+            )
+            logger.info(
+                f"每日选股完成: saved={stats.get('saved')} skipped={stats.get('skipped')} "
+                f"markets={stats.get('markets')}"
+            )
+            # 仅在本次确实写入了新选股时推送，避免重复运行反复推送同一批结果
+            if stats.get("saved"):
+                service.notify_daily_picks()
+            return 0
+
+        # 模式0.7: 选股次日验证
+        if getattr(args, 'verify_picks', False):
+            logger.info("模式: 选股次日验证")
+            from src.services.screening_verification_service import (
+                ScreeningVerificationService,
+            )
+
+            market_arg = getattr(args, 'picks_market', None)
+            service = ScreeningVerificationService()
+            stats = service.verify_picks(
+                market=market_arg.strip() if market_arg else None,
+                force=bool(getattr(args, 'verify_force', False)),
+            )
+            logger.info(
+                f"选股验证完成: processed={stats.get('processed')} done={stats.get('done')} "
+                f"insufficient={stats.get('insufficient')} errors={stats.get('errors')}"
+            )
+            # 仅在本轮确实完成验证时推送，避免 T+1 数据未出时反复推送「待验证」
+            if stats.get("done"):
+                service.notify_verification_result()
             return 0
 
         # 模式1: 仅大盘复盘
