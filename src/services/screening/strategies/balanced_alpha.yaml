@@ -29,8 +29,10 @@ screening:
     pb_max: 8.0
     change_pct_min: -4.0
     change_pct_max: 8.5
+    # 小资金可操作性：A 股 1 手 = 100 股，价格上限 15 元时单只最坏约 1500 元，
+    # 5 只合计不超过 7500 元，适配万元以内的测试资金。
     price_min: 3
-    price_max: 220
+    price_max: 15
   tech_weight: 0.35
   factor_weights:
     value: 0.22

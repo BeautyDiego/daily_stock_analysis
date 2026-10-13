@@ -3,9 +3,9 @@
 # 美股大盘动量策略
 #
 # 与 A 股策略的差异（重要）：
-# 1. market_scope 为 [us]，走 snapshot_us（yfinance）取数；
-# 2. 不使用 pe / pb / 换手率 相关硬过滤 —— 美股快照的估值字段依赖
-#    yfinance info 补充，缺失时会把候选全部过滤掉；
+# 1. market_scope 为 [us]，走 snapshot_us（腾讯报价接口）取数；
+# 2. 不使用 pe / pb / 换手率 相关硬过滤 —— 腾讯美股报价不提供 PB 与量比，
+#    用缺失字段做过滤会把候选整体剔除；
 # 3. 不启用依赖日 K 的过滤条件（ma20 / macd / rsi / 20 日特征等），
 #    避免对美股代码走 A 股日线源取数失败。
 name: us_blue_chip_momentum
@@ -32,7 +32,10 @@ screening:
     market_cap_min: 5000000000
     change_pct_min: -8.0
     change_pct_max: 12.0
+    # 小资金可操作性：美股 1 股起买，价格上限 150 美元时单只约 1065 元，
+    # 5 只合计约 5300 元，适配万元以内的测试资金。
     price_min: 5
+    price_max: 150
   tech_weight: 0.55
   factor_weights:
     momentum: 0.40
