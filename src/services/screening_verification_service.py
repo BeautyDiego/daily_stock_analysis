@@ -217,8 +217,8 @@ class ScreeningVerificationService:
         except Exception as exc:  # noqa: BLE001 - 政策加成失败不阻断选股
             logger.warning("政策加成失败，按原始分数继续: %s", exc)
 
-        cooldown_days = max(1, int(os.getenv("CN_COOLDOWN_TRADING_DAYS", "10")))
-        max_per_industry = max(1, int(os.getenv("CN_MAX_PER_INDUSTRY", "2")))
+        cooldown_days = _env_int("CN_COOLDOWN_TRADING_DAYS", 10)
+        max_per_industry = _env_int("CN_MAX_PER_INDUSTRY", 2)
 
         kept, dedupe_stats = filter_candidates(
             picks,
@@ -906,6 +906,22 @@ def _verdict_detail(verification: Dict[str, Any]) -> str:
         text += f" / 基准 {benchmark_pct:+.2f}%"
         text += f" (超额 {(verification.get('excess_return_pct') or 0.0):+.2f}%)"
     return text
+
+
+def _env_int(name: str, default: int, *, minimum: int = 1) -> int:
+    """读取整型环境变量，非法值回退默认值。
+
+    一条写错的配置（如 ``CN_COOLDOWN_TRADING_DAYS=ten``）不应该让整次选股失败。
+    """
+    raw = os.getenv(name)
+    if raw is None or not str(raw).strip():
+        return default
+    try:
+        value = int(str(raw).strip())
+    except (TypeError, ValueError):
+        logger.warning("环境变量 %s 不是整数（%r），已回退默认值 %s", name, raw, default)
+        return default
+    return max(minimum, value)
 
 
 def _json_or_none(value: Any) -> Optional[str]:

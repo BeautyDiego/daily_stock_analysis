@@ -211,7 +211,11 @@ def recent_policy_hits(
                 "title": row.title,
             }
         )
-    hits.sort(key=lambda item: (-int(item["strength"]), item["event_date"]), reverse=False)
+    # 强度高的排前面；同强度时日期更新的排前面（原实现按日期升序，取到的是最旧一条）
+    hits.sort(
+        key=lambda item: (int(item["strength"]), item["event_date"]),
+        reverse=True,
+    )
     return hits
 
 

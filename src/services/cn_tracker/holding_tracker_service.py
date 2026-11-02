@@ -257,6 +257,13 @@ def sync_daily_history(
         columns = ["date", "open", "high", "low", "close", "volume"]
         if "amount" in payload.columns:
             columns.append("amount")
+        # pct_chg 是一字板判定的方向依据；数据源不提供时按收盘价自行计算，
+        # 否则 save_daily_data 会写 NULL，模拟盘就无法分辨涨停还是跌停。
+        if "pct_chg" not in payload.columns:
+            payload["pct_chg"] = (
+                pd.to_numeric(payload["close"], errors="coerce").pct_change() * 100
+            ).round(2)
+        columns.append("pct_chg")
         try:
             manager.save_daily_data(
                 payload[columns], code=code, data_source="cn_tracker"
@@ -368,7 +375,7 @@ def _score_review(
     name = str(position.get("name") or "")
     entry = _as_float(position.get("entry_price"))
     source_date = position.get("source_date")
-    holding_days = (review_date - source_date).days if isinstance(source_date, date) else 0
+    holding_days = _count_holding_days(source_date, review_date)
 
     reasons: List[str] = []
     review: Dict[str, Any] = {
@@ -592,6 +599,25 @@ def _persist_reviews(
             position.last_advice = existing.advice
             position.last_score = existing.total_score
         session.commit()
+
+
+def _count_holding_days(source_date: Any, review_date: date) -> int:
+    """持有交易日数（不含开仓当日）。
+
+    时间止损按「交易日」衡量：用自然日会把周末算进去，导致 10 个交易日的
+    止损线实际提前到第 7 个交易日触发。交易日历不可用时退回自然日估算。
+    """
+    if not isinstance(source_date, date):
+        return 0
+    try:
+        from src.core.trading_calendar import get_trading_dates
+
+        dates = get_trading_dates("cn", source_date, review_date)
+        if dates is not None and len(dates):
+            return max(0, len(dates) - 1)
+    except Exception as exc:  # noqa: BLE001 - 日历不可用时降级
+        logger.warning("交易日历不可用，持有天数按自然日估算: %s", exc)
+    return max(0, (review_date - source_date).days)
 
 
 def _pct_change(series: Any, days: int) -> Optional[float]:

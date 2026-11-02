@@ -228,9 +228,10 @@ def build_paper_report_text(report: Dict[str, Any]) -> str:
     return_pct = report.get("return_pct")
 
     lines = [f"模拟盘日报 · {report.get('as_of')}", ""]
+    pct_text = f"{return_pct:+.2f}%" if isinstance(return_pct, (int, float)) else "--"
     lines.append(
         f"总资产 {equity:.2f} 元（初始 {initial:.0f} 元，"
-        f"收益 {equity - initial:+.2f} 元 / {return_pct:+.2f}%）"
+        f"收益 {equity - initial:+.2f} 元 / {pct_text}）"
     )
     lines.append(f"持仓市值 {market_value:.2f} 元｜可用现金 {cash:.2f} 元")
 
@@ -568,7 +569,13 @@ def _tradable_price(
         return None, "suspend"
 
     if high is not None and low is not None and float(high) == float(low):
-        change = float(pct_chg or 0.0)
+        change = float(pct_chg) if pct_chg is not None else None
+        if change is None:
+            # 存量日线可能没有 pct_chg：退回用前收盘价自行计算方向
+            prev_close = _previous_close(db, code, trade_date)
+            if prev_close:
+                change = (float(open_price) - prev_close) / prev_close * 100
+        change = change or 0.0
         if change < 0 and side == "sell":
             return None, "limit_down_sealed"
         if change > 0 and side == "buy":
@@ -576,6 +583,25 @@ def _tradable_price(
 
     factor = 1 + SLIPPAGE_RATE if side == "buy" else 1 - SLIPPAGE_RATE
     return round(float(open_price) * factor, 2), "ok"
+
+
+def _previous_close(
+    db: DatabaseManager, code: str, trade_date: date
+) -> Optional[float]:
+    """取严格早于 trade_date 的最近一根收盘价（用于补算涨跌幅）。"""
+    with db.get_session() as session:
+        row = (
+            session.query(StockDaily.close)
+            .filter(
+                StockDaily.code == str(code),
+                StockDaily.date < trade_date,
+            )
+            .order_by(StockDaily.date.desc())
+            .first()
+        )
+    if row and row[0]:
+        return float(row[0])
+    return None
 
 
 def _dedup_hash(account_id: int, trade_date: date, code: str, side: str) -> str:

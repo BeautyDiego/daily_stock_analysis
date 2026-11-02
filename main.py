@@ -2014,8 +2014,14 @@ def main() -> int:
             parts = [item.strip() for item in str(args.mark_position).split(':')]
             code = parts[0] if parts else ""
             status = parts[1] if len(parts) > 1 else ""
-            entry_price = float(parts[2]) if len(parts) > 2 and parts[2] else None
-            quantity = float(parts[3]) if len(parts) > 3 and parts[3] else None
+            try:
+                entry_price = float(parts[2]) if len(parts) > 2 and parts[2] else None
+                quantity = float(parts[3]) if len(parts) > 3 and parts[3] else None
+            except ValueError:
+                logger.error(
+                    f"标记跟踪状态参数格式错误（价格/数量需为数字）: {args.mark_position}"
+                )
+                return 1
 
             from src.services.cn_tracker.holding_tracker_service import set_position_status
 
