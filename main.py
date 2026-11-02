@@ -540,6 +540,32 @@ def parse_arguments() -> argparse.Namespace:
         help='标记跟踪状态：CODE:STATUS[:价格[:数量]]，STATUS 取 holding/reduced/closed/watching'
     )
 
+    # === A 股模拟盘 ===
+    parser.add_argument(
+        '--paper-init',
+        action='store_true',
+        help='初始化模拟盘账户（幂等，仅在首次创建时入金）'
+    )
+
+    parser.add_argument(
+        '--paper-initial-cash',
+        type=float,
+        default=None,
+        help='模拟盘初始资金，默认 20000 元'
+    )
+
+    parser.add_argument(
+        '--paper-run',
+        action='store_true',
+        help='执行当日模拟盘操作：按复盘建议卖出、按当日选股买入、收盘估值'
+    )
+
+    parser.add_argument(
+        '--paper-report',
+        action='store_true',
+        help='输出模拟盘概览（净值、持仓、近期成交）'
+    )
+
     return parser.parse_args()
 
 
@@ -1573,6 +1599,9 @@ def _skips_stock_entry(args: argparse.Namespace, config: Config) -> bool:
         or getattr(args, "review_holdings", False)
         or getattr(args, "sync_daily", False)
         or bool(getattr(args, "mark_position", None))
+        or getattr(args, "paper_init", False)
+        or getattr(args, "paper_run", False)
+        or getattr(args, "paper_report", False)
         or getattr(args, "market_review", False)
         or getattr(args, "serve_only", False)
         or getattr(args, "webui_only", False)
@@ -1995,6 +2024,50 @@ def main() -> int:
             )
             logger.info(f"标记跟踪状态: code={code} status={status} ok={ok}")
             return 0 if ok else 1
+
+        # 模式0.12: 模拟盘初始化（仅 A 股）
+        if getattr(args, 'paper_init', False):
+            logger.info("模式: 模拟盘初始化")
+            from src.services.cn_tracker.paper_trading_service import ensure_paper_account
+
+            initial_cash = float(
+                getattr(args, 'paper_initial_cash', None) or 20000.0
+            )
+            account = ensure_paper_account(initial_cash=initial_cash)
+            logger.info(
+                f"模拟盘账户: id={account.get('id')} name={account.get('name')} "
+                f"初始资金={initial_cash:.2f}"
+            )
+            return 0
+
+        # 模式0.13: 模拟盘每日运行（仅 A 股）
+        if getattr(args, 'paper_run', False):
+            logger.info("模式: 模拟盘每日运行")
+            from src.services.cn_tracker.paper_trading_service import run_daily_paper
+
+            stats = run_daily_paper()
+            snapshot = stats.get("snapshot") or {}
+            logger.info(
+                f"模拟盘运行完成: date={stats.get('trade_date')} "
+                f"buys={len(stats.get('buys') or [])} sells={len(stats.get('sells') or [])} "
+                f"equity={snapshot.get('total_equity')} cash={snapshot.get('total_cash')}"
+            )
+            return 0
+
+        # 模式0.14: 模拟盘概览（仅 A 股）
+        if getattr(args, 'paper_report', False):
+            from src.services.cn_tracker.paper_trading_service import (
+                build_paper_report_text,
+                get_paper_report,
+            )
+
+            report = get_paper_report()
+            text = build_paper_report_text(report)
+            if text:
+                print(text)
+            else:
+                print(report.get("message") or "模拟盘暂无数据")
+            return 0 if report.get("initialized") else 1
 
         # 模式1: 仅大盘复盘
         if args.market_review:
