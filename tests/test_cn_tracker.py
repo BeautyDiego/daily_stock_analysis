@@ -142,6 +142,19 @@ class PolicyClassificationTest(unittest.TestCase):
         self.assertEqual(_detect_level("发改委发布通知"), "ministry")
         self.assertEqual(_detect_level("某省出台措施"), "local")
 
+    def test_sector_hits_are_ranked_by_keyword_length(self):
+        """更长的关键词更可信：「智能驾驶」应排在「银行」之前。"""
+        sectors = _detect_sectors("智能驾驶 银行", max_sectors=2)
+        self.assertEqual(sectors, ["汽车", "银行"])
+
+    def test_sector_hits_respect_definition_order_when_equal_length(self):
+        sectors = _detect_sectors("银行 钢铁", max_sectors=2)
+        self.assertEqual(sectors, ["银行", "钢铁"])
+
+    def test_sector_hits_are_capped(self):
+        many = "银行 券商 保险 地产 建材 钢铁 有色 煤炭 石油 化工 光伏 机械 军工 汽车 家电"
+        self.assertLessEqual(len(_detect_sectors(many)), 3)
+
     def test_policy_delta_clamped(self):
         positive = [{"direction": "positive", "strength": 5}] * 4
         negative = [{"direction": "negative", "strength": 5}] * 4
@@ -333,6 +346,25 @@ class HoldingReviewTest(_DbTestCase):
         )
         self.assertEqual(review["advice"], "reduce")
         self.assertEqual(review["scores"]["total"], 0.0)
+
+    def test_close_position_uses_given_exit_date(self):
+        """补记历史交割时，了结日期应取传入值而不是当天。"""
+        ensure_tracked_positions(
+            [{"code": "600016", "name": "民生银行", "price": 3.5}],
+            pick_date=date(2026, 11, 2),
+            db=self.db,
+        )
+        exit_day = date(2026, 10, 30)
+
+        self.assertTrue(
+            set_position_status(
+                "600016", "closed", exit_price=3.4, exit_date=exit_day, db=self.db
+            )
+        )
+
+        with self.db.get_session() as session:
+            position = session.query(TrackedPosition).one()
+        self.assertEqual(position.exit_date, exit_day)
 
     def test_review_report_renders_advice(self):
         content = build_review_report(

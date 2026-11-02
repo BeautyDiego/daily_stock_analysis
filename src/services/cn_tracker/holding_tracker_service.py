@@ -179,11 +179,15 @@ def set_position_status(
     entry_price: Optional[float] = None,
     quantity: Optional[float] = None,
     exit_price: Optional[float] = None,
+    exit_date: Optional[date] = None,
     exit_reason: str = "",
     db: Optional[DatabaseManager] = None,
     market: str = "cn",
 ) -> bool:
-    """人工标记跟踪状态（holding / reduced / closed）。"""
+    """人工标记跟踪状态（holding / reduced / closed）。
+
+    ``exit_date`` 用于补记历史交割；不传则取当天。
+    """
     normalized = str(status or "").strip().lower()
     if normalized not in ("watching", "holding", "reduced", "closed"):
         raise ValueError(f"Unsupported position status: {status}")
@@ -209,7 +213,7 @@ def set_position_status(
         if quantity is not None:
             row.quantity = float(quantity)
         if normalized == "closed":
-            row.exit_date = date.today()
+            row.exit_date = exit_date or date.today()
             row.exit_price = float(exit_price) if exit_price is not None else row.entry_price
             row.exit_reason = str(exit_reason or "")[:32] or None
         session.commit()

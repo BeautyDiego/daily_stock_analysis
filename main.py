@@ -2023,10 +2023,26 @@ def main() -> int:
                 )
                 return 1
 
+            exit_date = None
+            if len(parts) > 4 and parts[4]:
+                from datetime import date as _date
+
+                try:
+                    exit_date = _date.fromisoformat(parts[4])
+                except ValueError:
+                    logger.error(
+                        f"标记跟踪状态日期格式错误（需 YYYY-MM-DD）: {parts[4]}"
+                    )
+                    return 1
+
             from src.services.cn_tracker.holding_tracker_service import set_position_status
 
             ok = set_position_status(
-                code, status, entry_price=entry_price, quantity=quantity
+                code,
+                status,
+                entry_price=entry_price,
+                quantity=quantity,
+                exit_date=exit_date,
             )
             logger.info(f"标记跟踪状态: code={code} status={status} ok={ok}")
             return 0 if ok else 1

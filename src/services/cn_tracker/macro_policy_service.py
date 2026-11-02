@@ -337,12 +337,21 @@ def _save_event(manager: DatabaseManager, item: Any, query: str) -> bool:
     return True
 
 
-def _detect_sectors(text: str) -> List[str]:
-    hits: List[str] = []
-    for sector, keywords in SECTOR_KEYWORDS.items():
-        if any(keyword in text for keyword in keywords):
-            hits.append(sector)
-    return hits
+def _detect_sectors(text: str, *, max_sectors: int = 3) -> List[str]:
+    """识别文本涉及的行业。
+
+    政策确实会跨行业，因此允许多个命中；但短词容易误判——「农业银行」会同时
+    命中「银行」和「农业」。这里按「命中的关键词越长越可信、同长度按行业定义
+    顺序（金融、周期等靠前）」排序，并限制返回数量。
+    """
+    scored: List[Tuple[int, int, str]] = []
+    for order, (sector, keywords) in enumerate(SECTOR_KEYWORDS.items()):
+        matched = [keyword for keyword in keywords if keyword in text]
+        if not matched:
+            continue
+        scored.append((max(len(keyword) for keyword in matched), -order, sector))
+    scored.sort(reverse=True)
+    return [sector for _, _, sector in scored[: max(1, int(max_sectors))]]
 
 
 def _detect_direction(text: str) -> str:
