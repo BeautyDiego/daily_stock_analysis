@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - [修复] 每日选股同一天同一市场只保留一份结果，重复运行整体跳过写入，避免多次运行选出的不同候选叠加后超过 Top N 且 rank 重复。
 
+- [新功能] 新增面向 A 股的选股与持仓跟踪能力（`src/services/cn_tracker/`）：宏观政策事件采集与政策加成、跨日冷却去重与行业分散、跟踪标的状态机与每日复盘三档建议；新增 `macro_events` / `tracked_positions` / `holding_reviews` 三张表，并为 `screening_picks` 扩展归因列。配套 `--collect-macro` / `--review-holdings` / `--sync-daily` / `--mark-position` 四个命令。
+
+- [文档] 新增《国内 A 股股票分析与持仓跟踪系统设计说明》（`docs/cn-holding-tracker-design.md`）：明确纯 A 股边界、每日选股漏斗与因子权重、政策加成规则、跨日去重与行业分散、两层复盘评分卡与三档持有建议、四张数据表结构、模块输入输出与调度时序。
+
 - [文档] 为每日选股与次日验证补充服务器部署章节：compose/容器形态、`.env` 模板、宿主机 crontab、端口与安全组、数据源可达性与额度实测、常见排障与回滚步骤。
 
 - [修复] ETF 轮动按真实 A 股交易日历保留全池缺报价日期及末尾缺口，防止调仓顺延、周末信号提前和动量窗口缩短；历史日历不可用时明确停止计算。
