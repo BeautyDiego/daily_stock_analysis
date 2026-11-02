@@ -395,9 +395,11 @@ python main.py --screen-picks --picks-market cn --picks-top 5
 # 5) 次日命中复盘（16:40）
 python main.py --verify-picks --picks-market cn
 
-# 人工标记持仓状态：CODE:STATUS[:价格[:数量]]
+# 人工标记持仓状态：CODE:STATUS[:价格[:数量[:日期]]]
 python main.py --mark-position 600016:holding:3.56:1000
 python main.py --mark-position 600016:closed:3.90
+# 补记历史交割日（不填则记当天）
+python main.py --mark-position 600016:closed:3.90:0:2026-11-02
 ```
 
 ### 11.3 选股链路（实测数据）
