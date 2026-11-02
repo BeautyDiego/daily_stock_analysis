@@ -24,8 +24,9 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import date
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from src.services.portfolio_service import PortfolioService
 from src.storage import (
@@ -42,7 +43,9 @@ logger = logging.getLogger(__name__)
 
 PAPER_ACCOUNT_NAME = "A股模拟盘"
 DEFAULT_INITIAL_CASH = 20000.0
-POSITION_SLOTS = 5
+# 仓位数量跟随 SCREENING_PICKS_TOP_N；这里的默认值仅在配置缺失时使用
+DEFAULT_POSITION_SLOTS = 5
+MAX_POSITION_SLOTS = 20
 LOT_SIZE = 100
 
 COMMISSION_RATE = 0.00025
@@ -130,6 +133,12 @@ def run_daily_paper(
 
     snapshot = _snapshot()
     summary = _extract_account_snapshot(snapshot, account_id, manager)
+
+    # 把实际持仓同步到跟踪表：否则复盘只覆盖「当日选股」，模拟盘持有的历史标的
+    # 永远拿不到持有建议（表现为卖出信号一直匹配不上）。
+    holdings = summary.get("positions") or []
+    if holdings:
+        _sync_tracked_holdings(holdings, trade_date=trade_date, db=manager)
 
     logger.info(
         "模拟盘交易日完成: date=%s buys=%s sells=%s equity=%.2f cash=%.2f",
@@ -347,6 +356,18 @@ def _execute_sells(
                     "advice": advice,
                 }
             )
+            # 清仓后把跟踪状态改成 closed，避免复盘继续对已了结标的出建议
+            if advice == "exit":
+                try:
+                    from src.services.cn_tracker.holding_tracker_service import (
+                        set_position_status,
+                    )
+
+                    set_position_status(
+                        code, "closed", exit_price=price, db=db
+                    )
+                except Exception as sync_exc:  # noqa: BLE001
+                    logger.debug("同步清仓状态失败 code=%s: %s", code, sync_exc)
         except Exception as exc:  # noqa: BLE001 - 单笔失败不影响其它
             logger.warning("模拟盘卖出失败 code=%s: %s", code, exc)
     return executed
@@ -405,7 +426,11 @@ def _execute_buys(
     positions = _load_positions(db, account_id)
 
     # 每个仓位等额预算；已有持仓不重复买入
-    budget = equity / POSITION_SLOTS
+    slots = _position_slots()
+    budget = equity / slots
+    logger.info(
+        "模拟盘建仓预算: 仓位=%s 单仓=%.2f 可用现金=%.2f", slots, budget, cash
+    )
     executed: List[Dict[str, Any]] = []
 
     for code, name in picks:
@@ -467,6 +492,69 @@ def _execute_buys(
         except Exception as exc:  # noqa: BLE001
             logger.warning("模拟盘买入失败 code=%s: %s", code, exc)
     return executed
+
+
+def _sync_tracked_holdings(
+    holdings: Sequence[Dict[str, Any]], *, trade_date: date, db: DatabaseManager
+) -> None:
+    """把模拟盘实际持仓登记为 holding，供每日复盘覆盖。
+
+    入参同时兼容两种结构：成交返回 ``code/name/price`` 与持仓快照
+    ``symbol/avg_cost``。
+    """
+    try:
+        from src.services.cn_tracker.holding_tracker_service import (
+            ensure_tracked_positions,
+            set_position_status,
+        )
+
+        normalized: List[Dict[str, Any]] = []
+        for item in holdings:
+            code = str(item.get("code") or item.get("symbol") or "").strip()
+            if not code:
+                continue
+            normalized.append(
+                {
+                    "code": code,
+                    "name": item.get("name") or "",
+                    "price": item.get("price") or item.get("avg_cost"),
+                    "quantity": item.get("quantity"),
+                }
+            )
+        if not normalized:
+            return
+
+        ensure_tracked_positions(normalized, pick_date=trade_date, db=db)
+        for item in normalized:
+            set_position_status(
+                item["code"],
+                "holding",
+                entry_price=item.get("price"),
+                quantity=item.get("quantity"),
+                db=db,
+            )
+    except Exception as exc:  # noqa: BLE001 - 同步失败不影响成交
+        logger.warning("同步模拟盘持仓到跟踪表失败: %s", exc)
+
+
+def _position_slots() -> int:
+    """单日建仓的仓位数量，跟随 ``SCREENING_PICKS_TOP_N``。
+
+    之前硬编码 5：一旦把选股只数改大，模拟盘仍然只买 5 只，配置等于失效。
+    """
+    raw = os.getenv("SCREENING_PICKS_TOP_N")
+    if raw is None or not str(raw).strip():
+        return DEFAULT_POSITION_SLOTS
+    try:
+        value = int(str(raw).strip())
+    except (TypeError, ValueError):
+        logger.warning(
+            "SCREENING_PICKS_TOP_N 不是整数（%r），模拟盘按默认 %s 个仓位执行",
+            raw,
+            DEFAULT_POSITION_SLOTS,
+        )
+        return DEFAULT_POSITION_SLOTS
+    return max(1, min(MAX_POSITION_SLOTS, value))
 
 
 def _affordable_quantity(budget: float, price: float, cash: float) -> int:

@@ -5,11 +5,14 @@ import os
 import tempfile
 import unittest
 from datetime import date, timedelta
+from unittest.mock import patch
 
 from src.config import Config
 from src.services.cn_tracker.holding_tracker_service import ensure_tracked_positions
 from src.services.cn_tracker.paper_trading_service import (
+    DEFAULT_POSITION_SLOTS,
     _affordable_quantity,
+    _position_slots,
     build_paper_report_text,
     ensure_paper_account,
     get_paper_report,
@@ -114,6 +117,19 @@ class PaperTradingTestCase(unittest.TestCase):
 
     def test_affordable_quantity_respects_cash(self):
         self.assertEqual(_affordable_quantity(4000, 3.5, 1000), 200)
+
+    def test_position_slots_follow_screening_top_n(self):
+        with patch.dict(os.environ, {"SCREENING_PICKS_TOP_N": "3"}):
+            self.assertEqual(_position_slots(), 3)
+        with patch.dict(os.environ, {"SCREENING_PICKS_TOP_N": "10"}):
+            self.assertEqual(_position_slots(), 10)
+
+    def test_position_slots_fall_back_on_invalid_value(self):
+        with patch.dict(os.environ, {"SCREENING_PICKS_TOP_N": "abc"}):
+            self.assertEqual(_position_slots(), DEFAULT_POSITION_SLOTS)
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("SCREENING_PICKS_TOP_N", None)
+            self.assertEqual(_position_slots(), DEFAULT_POSITION_SLOTS)
 
     # ------------------------------------------------------------------
     # 账户
@@ -331,6 +347,45 @@ class PaperTradingTestCase(unittest.TestCase):
         self.assertAlmostEqual(
             first["snapshot"]["total_equity"], second["snapshot"]["total_equity"], places=2
         )
+
+    # ------------------------------------------------------------------
+    # 与跟踪表的同步（否则复盘覆盖不到模拟盘持仓）
+    # ------------------------------------------------------------------
+
+    def test_buy_syncs_tracked_position_as_holding(self):
+        signal_date = date(2026, 11, 2)
+        trade_date = date(2026, 11, 3)
+        self._add_pick("600016", "民生银行", 3.5, signal_date, rank=1)
+        self._add_daily("600016", trade_date, close=3.6, open_price=3.5)
+        ensure_paper_account(initial_cash=20000, db=self.db)
+
+        stats = run_daily_paper(as_of=trade_date, db=self.db)
+
+        self.assertEqual(len(stats["buys"]), 1)
+        with self.db.get_session() as session:
+            position = (
+                session.query(TrackedPosition)
+                .filter(TrackedPosition.code == "600016")
+                .one()
+            )
+        self.assertEqual(position.status, "holding")
+        self.assertEqual(position.source_date, trade_date)
+
+    def test_exit_closes_tracked_position(self):
+        self._open_position(date(2026, 11, 2), date(2026, 11, 3))
+        sell_date = date(2026, 11, 4)
+        self._add_daily("600016", sell_date, close=3.7, open_price=3.65)
+        self._add_review("600016", sell_date, "exit")
+
+        run_daily_paper(as_of=sell_date, db=self.db)
+
+        with self.db.get_session() as session:
+            position = (
+                session.query(TrackedPosition)
+                .filter(TrackedPosition.code == "600016")
+                .one()
+            )
+        self.assertEqual(position.status, "closed")
 
     # ------------------------------------------------------------------
     # 概览
