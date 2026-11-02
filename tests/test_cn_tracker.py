@@ -298,6 +298,31 @@ class HoldingReviewTest(_DbTestCase):
         self.assertEqual(review["advice"], "exit")
         self.assertLess(review["return_pct"], -8)
 
+    def test_score_review_prefers_actual_holding_cost(self):
+        """已持仓时用实际成本算浮盈，避免复盘与模拟盘日报数字打架。"""
+        closes = [10.0] * 19 + [11.0]
+        history = _frame(closes)
+        benchmark = _frame([3000.0] * 20)
+
+        with_cost = _score_review(
+            position=self._position(entry_price=10.0),
+            history=history,
+            benchmark=benchmark,
+            review_date=date(2026, 11, 2),
+            db=self.db,
+            cost_map={"600016": 10.5},
+        )
+        without_cost = _score_review(
+            position=self._position(entry_price=10.0),
+            history=history,
+            benchmark=benchmark,
+            review_date=date(2026, 11, 2),
+            db=self.db,
+        )
+
+        self.assertAlmostEqual(with_cost["return_pct"], 4.76, places=1)
+        self.assertAlmostEqual(without_cost["return_pct"], 10.0, places=1)
+
     def test_missing_history_degrades_to_reduce(self):
         review = _score_review(
             position=self._position(),

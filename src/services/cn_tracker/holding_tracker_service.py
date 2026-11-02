@@ -129,6 +129,8 @@ def review_holdings(
         }
 
     benchmark = _load_history(BENCHMARK_CODE)
+    # 已持仓标的用模拟盘实际成本，未持仓的仍用推荐价
+    cost_map = _load_paper_costs(manager, market=market)
     reviews: List[Dict[str, Any]] = []
     errors = 0
 
@@ -141,6 +143,7 @@ def review_holdings(
                 benchmark=benchmark,
                 review_date=review_date,
                 db=manager,
+                cost_map=cost_map,
             )
             reviews.append(review)
         except Exception as exc:  # noqa: BLE001 - 单只失败不影响整体
@@ -357,6 +360,48 @@ def _position_snapshot(row: TrackedPosition) -> Dict[str, Any]:
     }
 
 
+def _load_paper_costs(db: DatabaseManager, *, market: str = "cn") -> Dict[str, float]:
+    """模拟盘实际持仓成本（含佣金），用于统一复盘与日报的浮盈口径。
+
+    复盘原本一律用「推荐价」计算，而模拟盘日报用「含佣金成本」，
+    同一只票会出现两个不同的盈亏数字；有持仓时以实际成本为准。
+    """
+    try:
+        from src.services.cn_tracker.paper_trading_service import PAPER_ACCOUNT_NAME
+    except Exception:  # noqa: BLE001 - 取不到账户名时退回推荐价
+        return {}
+
+    from src.storage import PortfolioAccount, PortfolioPosition
+
+    with db.get_session() as session:
+        account = (
+            session.query(PortfolioAccount)
+            .filter(PortfolioAccount.name == PAPER_ACCOUNT_NAME)
+            .first()
+        )
+        if account is None:
+            return {}
+        rows = (
+            session.query(PortfolioPosition.symbol, PortfolioPosition.avg_cost)
+            .filter(
+                PortfolioPosition.account_id == account.id,
+                PortfolioPosition.market == market,
+                PortfolioPosition.quantity > 0,
+            )
+            .all()
+        )
+
+    costs: Dict[str, float] = {}
+    for symbol, cost in rows:
+        try:
+            value = float(cost)
+        except (TypeError, ValueError):
+            continue
+        if value > 0:
+            costs[str(symbol)] = value
+    return costs
+
+
 def _load_history(code: str, *, lookback_days: int = 60) -> Optional[pd.DataFrame]:
     try:
         from src.services.screening.daily import fetch_daily_history
@@ -386,10 +431,15 @@ def _score_review(
     benchmark: Optional[pd.DataFrame],
     review_date: date,
     db: DatabaseManager,
+    cost_map: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Any]:
     code = str(position.get("code") or "")
     name = str(position.get("name") or "")
     entry = _as_float(position.get("entry_price"))
+    # 已持仓时用模拟盘实际成本（含佣金），否则复盘与日报会给同一只票两个浮盈
+    actual_cost = (cost_map or {}).get(code)
+    if actual_cost:
+        entry = float(actual_cost)
     source_date = position.get("source_date")
     holding_days = _count_holding_days(source_date, review_date)
 
