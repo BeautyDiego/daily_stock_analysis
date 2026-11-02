@@ -17,6 +17,7 @@ analysis_history），本模块评估的是选股管线产出的候选，两者�
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from datetime import date, datetime
@@ -90,6 +91,15 @@ class ScreeningVerificationService:
         """
         from src.services.screening_service import ScreeningService
 
+        # 选股管线的候选池上限是模块级常量（默认 12，面向 LLM 排序设计，不读环境变量）。
+        # A 股要做跨日去重与行业分散，12 只往往不足以在分散后凑满 Top N，运行时抬高。
+        try:
+            from src.services import screening_service as _screening_module
+
+            _screening_module.DSA_SCREENING_LLM_MAX_CANDIDATES = 30
+        except Exception as exc:  # noqa: BLE001 - 调整失败时退回默认候选池
+            logger.debug("调整选股候选池上限失败: %s", exc)
+
         target_markets = [m for m in (markets or list(SUPPORTED_MARKETS))]
         default_pick_date = pick_date or date.today()
         top_n = max(int(max_results), 1)
@@ -117,10 +127,13 @@ class ScreeningVerificationService:
                 "pick_date": market_pick_date.isoformat(),
             }
             try:
+                # A 股多取候选，给「政策加成 + 跨日去重 + 行业分散」留足空间：
+                # 因子打分容易集中在同一行业，候选太少会导致分散后凑不满 Top N
+                candidate_limit = top_n * 6 if market == "cn" else top_n
                 payload = screening.screen(
                     strategy=strategy or self._default_strategy(screening, market),
                     market=market,
-                    max_results=top_n,
+                    max_results=candidate_limit,
                 )
             except Exception as exc:  # noqa: BLE001 - 单一市场失败不影响其他市场
                 logger.warning("选股失败，已跳过市场 %s: %s", market, exc)
@@ -134,6 +147,18 @@ class ScreeningVerificationService:
                 logger.warning("市场 %s 本次未产出候选", market)
                 stats["markets"][market] = market_stats
                 continue
+
+            if market == "cn":
+                picks = self._apply_cn_filters(
+                    picks,
+                    as_of=market_pick_date,
+                    limit=top_n,
+                    market_stats=market_stats,
+                )
+                if not picks:
+                    logger.warning("市场 %s 去重后无剩余候选", market)
+                    stats["markets"][market] = market_stats
+                    continue
 
             run_id = str(payload.get("run_id") or f"{market}-{market_pick_date.isoformat()}")
             saved, skipped = self._save_picks(
@@ -150,7 +175,73 @@ class ScreeningVerificationService:
             stats["skipped"] += skipped
             stats["markets"][market] = market_stats
 
+            # A 股：仅在本次确实落库时建立跟踪；否则跟踪的会是「未入库的候选」
+            if market == "cn" and saved > 0:
+                try:
+                    from src.services.cn_tracker.holding_tracker_service import (
+                        ensure_tracked_positions,
+                    )
+
+                    market_stats["tracked"] = ensure_tracked_positions(
+                        picks[:top_n],
+                        pick_date=market_pick_date,
+                        db=self._db,
+                        market="cn",
+                    )
+                except Exception as exc:  # noqa: BLE001 - 跟踪失败不影响落库
+                    logger.warning("建立跟踪标的失败: %s", exc)
+                    stats["errors"].append(
+                        {"market": market, "message": f"track: {exc}"}
+                    )
+
         return stats
+
+    def _apply_cn_filters(
+        self,
+        picks: List[Dict[str, Any]],
+        *,
+        as_of: date,
+        limit: int,
+        market_stats: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """A 股：政策加成 → 跨日去重/行业分散 → 按总分重排。"""
+        from src.services.cn_tracker.dedupe_filter import filter_candidates
+        from src.services.cn_tracker.industry import fill_missing_industries
+        from src.services.cn_tracker.macro_policy_service import apply_policy_bonus
+
+        # 快照不提供行业字段：先补齐，否则行业分散与政策匹配都会失效
+        picks = list(fill_missing_industries(picks))
+
+        try:
+            picks = apply_policy_bonus(picks, db=self._db, as_of=as_of)
+        except Exception as exc:  # noqa: BLE001 - 政策加成失败不阻断选股
+            logger.warning("政策加成失败，按原始分数继续: %s", exc)
+
+        cooldown_days = max(1, int(os.getenv("CN_COOLDOWN_TRADING_DAYS", "10")))
+        max_per_industry = max(1, int(os.getenv("CN_MAX_PER_INDUSTRY", "2")))
+
+        kept, dedupe_stats = filter_candidates(
+            picks,
+            db=self._db,
+            as_of=as_of,
+            cooldown_days=cooldown_days,
+            max_per_industry=max_per_industry,
+            limit=limit,
+            market="cn",
+        )
+        market_stats["dedupe"] = {
+            "input": dedupe_stats["input"],
+            "kept": dedupe_stats["kept"],
+            "dropped": dedupe_stats["dropped"],
+            "exempted": dedupe_stats["cooldown_exempted"],
+        }
+
+        kept.sort(
+            key=lambda item: -_as_float(item.get("score") or item.get("final_score") or 0)
+        )
+        for index, item in enumerate(kept, start=1):
+            item["rank"] = index
+        return kept
 
     @staticmethod
     def _default_strategy(screening: Any, market: str) -> str:
@@ -237,6 +328,10 @@ class ScreeningVerificationService:
                         entry_price=_as_float(item.get("price") or item.get("entry_price")),
                         final_score=_as_float(item.get("score") or item.get("final_score")),
                         ranking_reason=str(item.get("ranking_reason") or item.get("reason") or ""),
+                        factor_scores=_json_or_none(item.get("factor_scores")),
+                        policy_hits=_json_or_none(item.get("policy_hits")),
+                        dedupe_note=str(item.get("dedupe_note") or "")[:255] or None,
+                        strategy_version=str(item.get("strategy_version") or "")[:64] or None,
                     )
                 )
                 saved += 1
@@ -811,6 +906,16 @@ def _verdict_detail(verification: Dict[str, Any]) -> str:
         text += f" / 基准 {benchmark_pct:+.2f}%"
         text += f" (超额 {(verification.get('excess_return_pct') or 0.0):+.2f}%)"
     return text
+
+
+def _json_or_none(value: Any) -> Optional[str]:
+    """把可序列化对象写成 JSON 字符串；空值返回 None。"""
+    if not value:
+        return None
+    try:
+        return json.dumps(value, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return None
 
 
 def _as_float(value: Any) -> Optional[float]:

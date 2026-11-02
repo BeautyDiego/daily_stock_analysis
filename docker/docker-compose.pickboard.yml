@@ -41,6 +41,11 @@ services:
       - pickboard-data:/app/data
       - pickboard-logs:/app/logs
       - pickboard-reports:/app/reports
+      # 代码目录直接挂载（只读）：弱网环境下重建镜像要重跑 apt/pip，过慢；
+      # 挂载后升级代码只需同步文件 + 重启容器，镜像只在依赖变化时才需要重建。
+      - ../src:/app/src:ro
+      - ../api:/app/api:ro
+      - ../main.py:/app/main.py:ro
     logging:
       driver: "json-file"
       options:

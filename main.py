@@ -507,6 +507,39 @@ def parse_arguments() -> argparse.Namespace:
         help='强制重算已验证的选股记录'
     )
 
+    # === A 股政策采集与持仓跟踪 ===
+    parser.add_argument(
+        '--collect-macro',
+        action='store_true',
+        help='采集宏观政策事件并结构化入库（仅 A 股）'
+    )
+
+    parser.add_argument(
+        '--macro-lookback-days',
+        type=int,
+        default=None,
+        help='政策采集的回溯天数，默认 3'
+    )
+
+    parser.add_argument(
+        '--review-holdings',
+        action='store_true',
+        help='对活跃跟踪标的做每日复盘，给出持有/减仓/离场建议（仅 A 股）'
+    )
+
+    parser.add_argument(
+        '--sync-daily',
+        action='store_true',
+        help='把跟踪标的与近期推荐标的的日线同步入库（仅 A 股）'
+    )
+
+    parser.add_argument(
+        '--mark-position',
+        type=str,
+        default=None,
+        help='标记跟踪状态：CODE:STATUS[:价格[:数量]]，STATUS 取 holding/reduced/closed/watching'
+    )
+
     return parser.parse_args()
 
 
@@ -1536,6 +1569,10 @@ def _skips_stock_entry(args: argparse.Namespace, config: Config) -> bool:
         or getattr(args, "etf_rotation", False)
         or getattr(args, "screen_picks", False)
         or getattr(args, "verify_picks", False)
+        or getattr(args, "collect_macro", False)
+        or getattr(args, "review_holdings", False)
+        or getattr(args, "sync_daily", False)
+        or bool(getattr(args, "mark_position", None))
         or getattr(args, "market_review", False)
         or getattr(args, "serve_only", False)
         or getattr(args, "webui_only", False)
@@ -1897,6 +1934,67 @@ def main() -> int:
             if stats.get("done"):
                 service.notify_verification_result()
             return 0
+
+        # 模式0.8: 宏观政策采集（仅 A 股）
+        if getattr(args, 'collect_macro', False):
+            logger.info("模式: 宏观政策采集")
+            from src.services.cn_tracker.macro_policy_service import collect_macro_events
+
+            stats = collect_macro_events(
+                lookback_days=int(getattr(args, 'macro_lookback_days', None) or 3)
+            )
+            logger.info(
+                f"政策采集完成: saved={stats.get('saved')} skipped={stats.get('skipped')} "
+                f"errors={stats.get('errors')} no_search={stats.get('no_search')}"
+            )
+            return 0
+
+        # 模式0.9: 持仓复盘（仅 A 股）
+        if getattr(args, 'review_holdings', False):
+            logger.info("模式: 持仓复盘")
+            from datetime import date as _date
+
+            from src.services.cn_tracker.holding_tracker_service import (
+                notify_holdings_review,
+                review_holdings,
+            )
+
+            stats = review_holdings()
+            logger.info(
+                f"持仓复盘完成: positions={stats.get('positions')} "
+                f"advice={stats.get('advice_counts')} errors={stats.get('errors')}"
+            )
+            if stats.get("reviews") and not getattr(args, 'no_notify', False):
+                notify_holdings_review(stats["reviews"], review_date=_date.today())
+            return 0
+
+        # 模式0.10: 日线同步（仅 A 股）
+        if getattr(args, 'sync_daily', False):
+            logger.info("模式: 日线同步")
+            from src.services.cn_tracker.holding_tracker_service import sync_daily_history
+
+            stats = sync_daily_history()
+            logger.info(
+                f"日线同步完成: targets={stats.get('targets')} saved={stats.get('saved')} "
+                f"errors={stats.get('errors')}"
+            )
+            return 0
+
+        # 模式0.11: 标记跟踪状态（仅 A 股）
+        if getattr(args, 'mark_position', None):
+            parts = [item.strip() for item in str(args.mark_position).split(':')]
+            code = parts[0] if parts else ""
+            status = parts[1] if len(parts) > 1 else ""
+            entry_price = float(parts[2]) if len(parts) > 2 and parts[2] else None
+            quantity = float(parts[3]) if len(parts) > 3 and parts[3] else None
+
+            from src.services.cn_tracker.holding_tracker_service import set_position_status
+
+            ok = set_position_status(
+                code, status, entry_price=entry_price, quantity=quantity
+            )
+            logger.info(f"标记跟踪状态: code={code} status={status} ok={ok}")
+            return 0 if ok else 1
 
         # 模式1: 仅大盘复盘
         if args.market_review:

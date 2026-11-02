@@ -359,6 +359,12 @@ class ScreeningPick(Base):
     final_score = Column(Float)
     ranking_reason = Column(Text)
 
+    # A 股跟踪扩展：便于复盘归因与去重说明（JSON 字符串）
+    factor_scores = Column(Text)
+    policy_hits = Column(Text)
+    dedupe_note = Column(Text)
+    strategy_version = Column(String(64))
+
     created_at = Column(DateTime, default=datetime.now, index=True)
 
     __table_args__ = (
@@ -414,6 +420,126 @@ class ScreeningVerification(Base):
     __table_args__ = (
         UniqueConstraint('pick_id', 'verify_date', name='uix_screening_verify_pick_date'),
         Index('ix_screening_verify_date_market', 'verify_date', 'market'),
+    )
+
+
+class MacroEvent(Base):
+    """宏观政策事件（A 股选股与持仓复盘的政策输入）。
+
+    每条事件由资讯源采集后规则化：方向 / 强度 / 影响行业，落库后不再依赖
+    LLM 在线，便于审计与回溯。
+    """
+
+    __tablename__ = 'macro_events'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    event_date = Column(Date, nullable=False, index=True)
+    title = Column(String(300), nullable=False)
+    source = Column(String(100), nullable=False)
+    url = Column(String(1000))
+
+    # central / ministry / local
+    level = Column(String(16), nullable=False, default='ministry')
+    # monetary / fiscal / industry / regulatory
+    category = Column(String(24), nullable=False, default='industry')
+    # positive / negative / neutral
+    direction = Column(String(8), nullable=False, default='neutral', index=True)
+    strength = Column(Integer, nullable=False, default=3)  # 1-5
+
+    sectors = Column(Text)  # JSON 数组，如 ["银行","建筑装饰"]
+    summary = Column(Text)
+    raw_text = Column(Text)
+    created_at = Column(DateTime, default=datetime.now, index=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            'event_date', 'title', 'source', name='uix_macro_event_date_title_source'
+        ),
+        Index('ix_macro_event_direction_date', 'direction', 'event_date'),
+    )
+
+
+class TrackedPosition(Base):
+    """A 股跟踪标的（跨日，同一代码仅一条活跃记录）。
+
+    由每日选股自动创建（status=watching），用户可标记建仓（holding）/
+    减仓（reduced）/ 了结（closed）。持仓复盘以此表为输入。
+    """
+
+    __tablename__ = 'tracked_positions'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String(16), nullable=False, index=True)
+    name = Column(String(64))
+    market = Column(String(8), nullable=False, default='cn', index=True)
+    # 申万一级行业，选股时写入，供政策匹配与行业分散复盘使用
+    industry = Column(String(64))
+
+    source_pick_id = Column(Integer, ForeignKey('screening_picks.id'))
+    source_date = Column(Date, nullable=False, index=True)
+
+    entry_date = Column(Date)
+    entry_price = Column(Float)
+    quantity = Column(Float, nullable=False, default=0.0)
+    avg_cost = Column(Float)
+
+    # watching / holding / reduced / closed
+    status = Column(String(12), nullable=False, default='watching', index=True)
+
+    exit_date = Column(Date)
+    exit_price = Column(Float)
+    exit_reason = Column(String(32))
+
+    last_review_date = Column(Date)
+    last_advice = Column(String(8))  # hold / reduce / exit
+    last_score = Column(Float)
+
+    created_at = Column(DateTime, default=datetime.now, index=True)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    __table_args__ = (
+        Index('ix_tracked_code_status', 'code', 'status'),
+        Index('ix_tracked_status_review', 'status', 'last_review_date'),
+    )
+
+
+class HoldingReview(Base):
+    """持仓每日复盘明细（评分卡 + 三档建议）。"""
+
+    __tablename__ = 'holding_reviews'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    position_id = Column(
+        Integer,
+        ForeignKey('tracked_positions.id'),
+        nullable=False,
+        index=True,
+    )
+    code = Column(String(16), nullable=False, index=True)
+    review_date = Column(Date, nullable=False, index=True)
+    holding_days = Column(Integer, nullable=False, default=0)
+
+    close = Column(Float)
+    return_pct = Column(Float)
+    excess_return_pct = Column(Float)
+
+    trend_score = Column(Float)
+    relative_score = Column(Float)
+    volume_score = Column(Float)
+    risk_score = Column(Float)
+    policy_score = Column(Float)
+    total_score = Column(Float)
+
+    advice = Column(String(8), nullable=False, index=True)  # hold / reduce / exit
+    reasons = Column(Text)  # JSON 数组
+    hard_exit = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, default=datetime.now, index=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            'position_id', 'review_date', name='uix_holding_review_position_date'
+        ),
+        Index('ix_holding_review_date_advice', 'review_date', 'advice'),
     )
 
 
@@ -1465,6 +1591,7 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
             self._ensure_decision_signal_profile_schema()
             self._ensure_stock_daily_canonical_id()
             self._ensure_intelligence_item_scope_values()
+            self._ensure_cn_tracker_schema()
             self._ensure_schema_migration_record()
             self._ensure_intelligence_items_unique_index()
 
@@ -1484,6 +1611,44 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
             self._SessionLocal = None
             self.__class__._instance = None
             raise
+
+    def _ensure_cn_tracker_schema(self) -> None:
+        """为存量库补充 A 股跟踪相关列（幂等，仅 SQLite 需要）。
+
+        ``Base.metadata.create_all`` 只会新建缺失的表，不会给已存在的表加列，
+        因此这里按项目既有做法做自愈式 ``ALTER TABLE ADD COLUMN``。
+        """
+        if not self._is_sqlite_engine:
+            return
+        inspector = inspect(self._engine)
+        if not inspector.has_table(ScreeningPick.__tablename__):
+            return
+        try:
+            existing = {
+                column["name"]
+                for column in inspector.get_columns(ScreeningPick.__tablename__)
+            }
+        except Exception as exc:  # noqa: BLE001 - 迁移失败不应阻塞启动
+            logger.warning("[CN tracker] 检查 screening_picks 列失败，已跳过: %s", exc)
+            return
+
+        for name, sql_type in (
+            ("factor_scores", "TEXT"),
+            ("policy_hits", "TEXT"),
+            ("dedupe_note", "TEXT"),
+            ("strategy_version", "VARCHAR(64)"),
+        ):
+            if name in existing:
+                continue
+            try:
+                with self._engine.begin() as connection:
+                    connection.exec_driver_sql(
+                        f"ALTER TABLE {ScreeningPick.__tablename__} "
+                        f"ADD COLUMN {name} {sql_type}"
+                    )
+            except OperationalError as exc:
+                if not self._is_sqlite_duplicate_column_error(exc, name):
+                    raise
 
     def _ensure_schema_migration_record(self) -> None:
         session = self._SessionLocal()
