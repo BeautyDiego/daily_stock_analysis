@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.services.portfolio_service import PortfolioService
 from src.storage import (
@@ -33,6 +33,7 @@ from src.storage import (
     HoldingReview,
     PortfolioDailySnapshot,
     PortfolioPosition,
+    PortfolioTrade,
     ScreeningPick,
     StockDaily,
 )
@@ -47,10 +48,16 @@ LOT_SIZE = 100
 COMMISSION_RATE = 0.00025
 COMMISSION_MIN = 5.0
 STAMP_TAX_RATE = 0.001
+# 滑点：模拟盘按收盘价成交，买上浮 / 卖下压 0.1%，避免系统性高估收益
+SLIPPAGE_RATE = 0.001
 
 # 初始资金视为「开户时已存入」的历史入金：这样回放任意 as_of 都能取到现金，
 # 不需要每次调用都对齐入金日期（现金不计息，不影响收益计算）。
 PAPER_CASH_START_DATE = date(2000, 1, 1)
+
+# 信号时效：选股日与执行日相差超过该天数就不再建仓（覆盖长假，
+# 同时避免把半个月前的旧信号当成新信号执行）
+MAX_SIGNAL_AGE_DAYS = 10
 
 
 def ensure_paper_account(
@@ -243,7 +250,10 @@ def build_paper_report_text(report: Dict[str, Any]) -> str:
         lines.append("当前空仓。")
 
     lines.append("")
-    lines.append("> 模拟成交按收盘价、未计滑点，收益为理论上限，仅供研究参考。")
+    lines.append(
+        "> 模拟成交按「信号次日开盘价」并计滑点与手续费；一字板与停牌日不成交，"
+        "仅供研究参考。"
+    )
     return "\n".join(lines)
 
 
@@ -291,15 +301,22 @@ def _execute_sells(
         if available < LOT_SIZE:
             continue
 
-        quantity = available if advice == "exit" else max(
-            LOT_SIZE, int(available // (LOT_SIZE * 2)) * LOT_SIZE
-        )
+        if advice == "exit":
+            quantity = available
+        else:
+            # 减半：向下取整到整手。若减半不足一手（持仓 ≤ 200 股），
+            # 直接清仓 —— 否则会剩下 100 股既减不动也管不了。
+            quantity = int(available // (LOT_SIZE * 2)) * LOT_SIZE
+            if quantity < LOT_SIZE:
+                quantity = available
         if quantity < LOT_SIZE:
             continue
 
-        price = _close_price(db, code, trade_date)
+        price, status = _tradable_price(db, code, trade_date, "sell")
         if price is None:
-            logger.warning("模拟盘卖出跳过（当日无收盘价）: code=%s", code)
+            logger.warning(
+                "模拟盘卖出未成交（%s）: code=%s advice=%s", status, code, advice
+            )
             continue
 
         amount = price * quantity
@@ -344,10 +361,33 @@ def _execute_buys(
     equity: float,
 ) -> List[Dict[str, Any]]:
     with db.get_session() as session:
+        # 选股在 T 日收盘后产生，最早只能 T+1 开盘买入，
+        # 所以取「严格早于执行日」的最近一个选股日作为买入信号。
+        signal_row = (
+            session.query(ScreeningPick.pick_date)
+            .filter(
+                ScreeningPick.market == "cn",
+                ScreeningPick.pick_date < trade_date,
+            )
+            .order_by(ScreeningPick.pick_date.desc())
+            .first()
+        )
+        if signal_row is None:
+            logger.info("模拟盘买入跳过：%s 之前没有选股记录", trade_date)
+            return []
+        signal_date = signal_row[0]
+        if (trade_date - signal_date).days > MAX_SIGNAL_AGE_DAYS:
+            logger.info(
+                "模拟盘买入跳过：信号日 %s 距执行日 %s 超过 %d 天",
+                signal_date,
+                trade_date,
+                MAX_SIGNAL_AGE_DAYS,
+            )
+            return []
         picks = (
             session.query(ScreeningPick.code, ScreeningPick.name)
             .filter(
-                ScreeningPick.pick_date == trade_date,
+                ScreeningPick.pick_date == signal_date,
                 ScreeningPick.market == "cn",
             )
             .order_by(ScreeningPick.rank)
@@ -355,6 +395,7 @@ def _execute_buys(
         )
     if not picks:
         return []
+    logger.info("模拟盘买入信号日: %s → 执行日 %s", signal_date, trade_date)
 
     if cash <= 0 or equity <= 0:
         logger.warning("模拟盘买入跳过：账户估值不可用 cash=%.2f equity=%.2f", cash, equity)
@@ -370,9 +411,23 @@ def _execute_buys(
         code = str(code)
         if code in positions:
             continue
-        price = _close_price(db, code, trade_date)
-        if price is None or price <= 0:
-            logger.warning("模拟盘买入跳过（当日无收盘价）: code=%s", code)
+        # 同一批信号只执行一次：否则信号日之后的每个交易日都会重复建仓
+        # （尤其是「当天卖出后又被买回来」这种错误）
+        buy_key = _dedup_hash(account_id, signal_date, code, "buy")
+        with db.get_session() as session:
+            already_bought = (
+                session.query(PortfolioTrade.id)
+                .filter(
+                    PortfolioTrade.account_id == account_id,
+                    PortfolioTrade.dedup_hash == buy_key,
+                )
+                .first()
+            )
+        if already_bought is not None:
+            continue
+        price, status = _tradable_price(db, code, trade_date, "buy")
+        if price is None:
+            logger.warning("模拟盘买入未成交（%s）: code=%s", status, code)
             continue
 
         quantity = _affordable_quantity(budget, price, cash)
@@ -393,7 +448,7 @@ def _execute_buys(
                 tax=0.0,
                 market="cn",
                 currency="CNY",
-                dedup_hash=_dedup_hash(account_id, trade_date, code, "buy"),
+                dedup_hash=_dedup_hash(account_id, signal_date, code, "buy"),
                 note="每日选股建仓",
             )
             executed.append(
@@ -471,11 +526,31 @@ def _cash_and_equity(
     return float(row.total_cash or 0.0), float(row.total_equity or 0.0)
 
 
-def _close_price(db: DatabaseManager, code: str, trade_date: date) -> Optional[float]:
-    """只接受当日收盘价：用其它日期成交会让模拟盘失真。"""
+def _tradable_price(
+    db: DatabaseManager, code: str, trade_date: date, side: str
+) -> Tuple[Optional[float], str]:
+    """返回当日「开盘挂单」的成交价与状态。
+
+    模拟盘不能按收盘价成交——收盘价是已经走完的价格，现实中挂不上单。
+    真实时序是：信号在前一交易日收盘后产生，**次日开盘**挂单，能不能成交取决于：
+
+    - 当日无 K 线 / 成交量为零 → 停牌，``suspend``
+    - 一字涨停（最高价 = 最低价且上涨）→ 买不进，``limit_up_sealed``
+    - 一字跌停（最高价 = 最低价且下跌）→ 卖不出，``limit_down_sealed``
+    - 其余情况按开盘价成交，并施加滑点
+
+    一字板用「最高价 == 最低价」判定，而不是猜涨跌停幅度：
+    主板 10%、创业板/科创板 20%、ST 5%，硬编码比例会误判。
+    """
     with db.get_session() as session:
         row = (
-            session.query(StockDaily.close)
+            session.query(
+                StockDaily.open,
+                StockDaily.high,
+                StockDaily.low,
+                StockDaily.volume,
+                StockDaily.pct_chg,
+            )
             .filter(
                 StockDaily.code == str(code),
                 StockDaily.date == trade_date,
@@ -483,9 +558,24 @@ def _close_price(db: DatabaseManager, code: str, trade_date: date) -> Optional[f
             .order_by(StockDaily.id.desc())
             .first()
         )
-    if row and row[0]:
-        return float(row[0])
-    return None
+
+    if row is None:
+        return None, "suspend"
+    open_price, high, low, volume, pct_chg = row
+    if open_price is None or float(open_price) <= 0:
+        return None, "suspend"
+    if volume is None or float(volume or 0) <= 0:
+        return None, "suspend"
+
+    if high is not None and low is not None and float(high) == float(low):
+        change = float(pct_chg or 0.0)
+        if change < 0 and side == "sell":
+            return None, "limit_down_sealed"
+        if change > 0 and side == "buy":
+            return None, "limit_up_sealed"
+
+    factor = 1 + SLIPPAGE_RATE if side == "buy" else 1 - SLIPPAGE_RATE
+    return round(float(open_price) * factor, 2), "ok"
 
 
 def _dedup_hash(account_id: int, trade_date: date, code: str, side: str) -> str:
