@@ -20,7 +20,12 @@ from src.services.cn_tracker.holding_tracker_service import (
     review_holdings,
     set_position_status,
 )
-from src.services.cn_tracker.industry import fill_missing_industries, infer_industry
+from src.services.cn_tracker.industry import (
+    _collect_sina_industry_nodes,
+    fill_missing_industries,
+    infer_industry,
+    sync_industry_map,
+)
 from src.services.cn_tracker.macro_policy_service import (
     _detect_direction,
     _detect_level,
@@ -64,6 +69,33 @@ class IndustryInferenceTest(unittest.TestCase):
         fill_missing_industries(items)
         self.assertEqual(items[0]["industry"], "银行")
         self.assertEqual(items[1]["industry"], "自定义")
+
+
+class IndustryMapSyncTest(unittest.TestCase):
+    def test_collects_sina_industry_nodes(self):
+        tree = [
+            "行情中心",
+            [["A股", [["新浪行业", [["玻璃行业", "", "new_blhy"], ["传媒娱乐", "", "new_cmyl"]]]]]],
+        ]
+        self.assertEqual(
+            _collect_sina_industry_nodes(tree),
+            [("玻璃行业", "new_blhy"), ("传媒娱乐", "new_cmyl")],
+        )
+
+    def test_returns_empty_for_unrelated_tree(self):
+        self.assertEqual(_collect_sina_industry_nodes(["行情中心", []]), [])
+
+    def test_sync_skips_when_file_is_fresh(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "industry_map.csv")
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("code,industry\n600000,银行\n600016,银行\n")
+
+            stats = sync_industry_map(data_dir=tmp, token="dummy-token")
+
+        self.assertFalse(stats["updated"])
+        self.assertEqual(stats["reason"], "fresh")
+        self.assertEqual(stats["rows"], 2)
 
 
 class _DbTestCase(unittest.TestCase):

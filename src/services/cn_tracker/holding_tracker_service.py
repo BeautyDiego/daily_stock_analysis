@@ -273,8 +273,24 @@ def sync_daily_history(
             errors += 1
             logger.warning("日线落库失败 code=%s: %s", code, exc)
 
-    logger.info("日线同步完成: targets=%s saved=%s errors=%s", len(targets), saved, errors)
-    return {"targets": len(targets), "saved": saved, "errors": errors}
+    # 顺带刷新行业映射（默认 7 天内复用，不重复拉取 Tushare）
+    from src.services.cn_tracker.industry import sync_industry_map
+
+    industry_stats = sync_industry_map()
+
+    logger.info(
+        "日线同步完成: targets=%s saved=%s errors=%s industry=%s",
+        len(targets),
+        saved,
+        errors,
+        industry_stats.get("reason"),
+    )
+    return {
+        "targets": len(targets),
+        "saved": saved,
+        "errors": errors,
+        "industry": industry_stats,
+    }
 
 
 def build_review_report(reviews: Sequence[Dict[str, Any]], *, review_date: date) -> str:
