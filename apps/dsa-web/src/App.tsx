@@ -19,6 +19,7 @@ import { resolveLoginRedirect } from './utils/loginRedirect';
 import './App.css';
 
 const HomePage = lazy(() => import('./pages/HomePage'));
+const PaperPage = lazy(() => import('./pages/PaperPage'));
 const BacktestPage = lazy(() => import('./pages/BacktestPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -95,6 +96,7 @@ const routeChildren = [
   { path: '/decision-signals', element: <DecisionSignalsPage /> },
   { path: '/screening', element: <StockScreeningPage /> },
   { path: '/pick-verification', element: <PickVerificationPage /> },
+  { path: '/paper', element: <PaperPage /> },
   { path: '/data', element: <DataCenterPage /> },
   { path: '/backtest', element: <BacktestPage /> },
   { path: '/alerts', element: <AlertsPage /> },
