@@ -597,6 +597,27 @@ def parse_arguments() -> argparse.Namespace:
         help='模拟盘：用当前最新信号立即建仓（人工干预，允许当天信号、不限制高开）'
     )
 
+    # === 因子验证 ===
+    parser.add_argument(
+        '--factor-layering',
+        action='store_true',
+        help='因子分层回测：验证单因子在选股池内的区分度（首次会先同步池子日线）'
+    )
+
+    parser.add_argument(
+        '--layering-pool',
+        type=int,
+        default=300,
+        help='回测池规模，默认 300'
+    )
+
+    parser.add_argument(
+        '--layering-days',
+        type=int,
+        default=120,
+        help='回看天数，默认 120'
+    )
+
     return parser.parse_args()
 
 
@@ -1638,6 +1659,7 @@ def _skips_stock_entry(args: argparse.Namespace, config: Config) -> bool:
         or getattr(args, "paper_watch", False)
         or getattr(args, "paper_settle", False)
         or getattr(args, "paper_trade_now", False)
+        or getattr(args, "factor_layering", False)
         or getattr(args, "market_review", False)
         or getattr(args, "serve_only", False)
         or getattr(args, "webui_only", False)
@@ -2169,6 +2191,21 @@ def main() -> int:
                     f"@{item.get('price')}（{item.get('reason')}）"
                 )
             return 0
+
+        # 模式0.20: 因子分层回测
+        if getattr(args, 'factor_layering', False):
+            logger.info("模式: 因子分层回测")
+            from src.services.cn_tracker.factor_layering import (
+                build_layering_report,
+                run_factor_layering,
+            )
+
+            stats = run_factor_layering(
+                pool_size=int(getattr(args, 'layering_pool', 300) or 300),
+                lookback_days=int(getattr(args, 'layering_days', 120) or 120),
+            )
+            print(build_layering_report(stats))
+            return 0 if not stats.get("error") else 1
 
         # 模式0.19: 模拟盘手动立即建仓（人工干预）
         if getattr(args, 'paper_trade_now', False):
