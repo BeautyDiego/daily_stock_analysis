@@ -2009,9 +2009,10 @@ def main() -> int:
                 f"每日选股完成: saved={stats.get('saved')} skipped={stats.get('skipped')} "
                 f"markets={stats.get('markets')}"
             )
-            # 仅在本次确实写入了新选股时推送，避免重复运行反复推送同一批结果
+            # 仅在本次确实写入了新选股时推送，避免重复运行反复推送同一批结果。
+            # 显式限定市场：本系统只跑 A 股，传 None 会把库里旧的美股记录也拼进来
             if stats.get("saved"):
-                service.notify_daily_picks()
+                service.notify_daily_picks(markets=markets or ["cn"])
             return 0
 
         # 模式0.7: 选股次日验证

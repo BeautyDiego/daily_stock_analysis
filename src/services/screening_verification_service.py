@@ -21,7 +21,7 @@ import json
 import logging
 import os
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from src.config import Config, get_config
 from src.core.trading_calendar import build_market_phase_context
@@ -645,30 +645,46 @@ class ScreeningVerificationService:
     # 结果推送
     # ------------------------------------------------------------------
 
-    def notify_daily_picks(self, *, pick_date: Optional[date] = None) -> bool:
+    def notify_daily_picks(
+        self,
+        *,
+        pick_date: Optional[date] = None,
+        markets: Optional[Sequence[str]] = None,
+    ) -> bool:
         """推送当日选股结果。
 
-        ``pick_date`` 为空时按市场各取最近一次选股日：A 股与美股可能不在同一个
-        交易日（美股在北京时间下午选股时，取价来自上一个美股交易日），只查
-        ``date.today()`` 会整体漏掉美股。
+        ``markets`` 用于限定推送范围：不传时按各市场最近一次选股日分别拼接。
+        本系统只跑 A 股，调度侧必须显式传 ``["cn"]``——否则库里若残留旧的美股
+        记录（已停用但未清理），会被拼进同一条推送（实测出现过「每日选股
+        2026-10-12【美股】」混在当日 A 股消息里）。
 
         Returns:
             是否推送成功；无内容或未配置渠道时返回 False
         """
         if pick_date is not None:
-            content = self.build_picks_report(pick_date)
+            content = self.build_picks_report(pick_date, markets=markets)
         else:
-            parts = [self.build_picks_report(item) for item in self._latest_pick_dates()]
+            parts = [
+                self.build_picks_report(item, markets=markets)
+                for item in self._latest_pick_dates(markets)
+            ]
             content = "\n\n".join(part for part in parts if part)
         if not content:
             logger.info("无当日选股记录，跳过推送")
             return False
         return self._send(content)
 
-    def _latest_pick_dates(self) -> List[date]:
-        """各市场最近一次选股日，按日期倒序。"""
+    def _latest_pick_dates(
+        self, markets: Optional[Sequence[str]] = None
+    ) -> List[date]:
+        """各市场最近一次选股日，按日期倒序；``markets`` 用于限定范围。"""
         with self._db.get_session() as session:
-            rows = session.query(ScreeningPick.market, ScreeningPick.pick_date).all()
+            query = session.query(ScreeningPick.market, ScreeningPick.pick_date)
+            if markets:
+                query = query.filter(
+                    ScreeningPick.market.in_([str(item) for item in markets])
+                )
+            rows = query.all()
         latest: Dict[str, date] = {}
         for market, pick_date in rows:
             if not isinstance(pick_date, date):
@@ -712,15 +728,19 @@ class ScreeningVerificationService:
         logger.info("选股结果推送完成: success=%s", success)
         return success
 
-    def build_picks_report(self, pick_date: date) -> str:
-        """把某日的选股结果渲染为 Markdown 推送正文。"""
+    def build_picks_report(
+        self, pick_date: date, *, markets: Optional[Sequence[str]] = None
+    ) -> str:
+        """把某日的选股结果渲染为 Markdown 推送正文；``markets`` 限定市场。"""
         with self._db.get_session() as session:
-            picks = (
-                session.query(ScreeningPick)
-                .filter(ScreeningPick.pick_date == pick_date)
-                .order_by(ScreeningPick.market, ScreeningPick.rank)
-                .all()
+            query = session.query(ScreeningPick).filter(
+                ScreeningPick.pick_date == pick_date
             )
+            if markets:
+                query = query.filter(
+                    ScreeningPick.market.in_([str(item) for item in markets])
+                )
+            picks = query.order_by(ScreeningPick.market, ScreeningPick.rank).all()
         if not picks:
             return ""
 
