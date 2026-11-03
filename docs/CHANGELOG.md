@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - [改进] 模拟盘补齐 P0 风控（`src/services/cn_tracker/risk_control.py`、`risk_filter.py`）：账户回撤 -10% 或单日亏损 -3% 暂停开新仓；沪深 300ETF 跌破 MA20 时仓位上限减半；滑点按价格分档（0.4%/0.25%/0.15%）；T+1 约束（当日买入不可卖）；选股增加退市风险剔除（名称含「退」+ PE/PB 兜底）。开盘执行后移到 09:45。
 
+- [改进] 止损止盈改为 ATR 自适应（P1）：止损 2×ATR（限 5%~15%）、止盈 4×ATR（限 10%~40%），复盘评分卡与盘中风控统一口径，ATR 不足时分别退回 -8% / +20%；复盘超额基准由上证指数改为中证 1000ETF（512100），文案同步改为「基准」。
+
 - [改进] A 股行业归属改用真实分类：`--sync-daily` 会生成 `data/screening/industry_map.csv`（Tushare `stock_basic` 优先、新浪行业板块兜底），选股管线经 `INDUSTRY_MAP_FILES` 填充快照 `industry`，名称关键词推断降为最后兜底。
 
 - [文档] 新增《国内 A 股股票分析与持仓跟踪系统设计说明》（`docs/cn-holding-tracker-design.md`）：明确纯 A 股边界、每日选股漏斗与因子权重、政策加成规则、跨日去重与行业分散、两层复盘评分卡与三档持有建议、四张数据表结构、模块输入输出与调度时序。
