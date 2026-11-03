@@ -208,7 +208,19 @@ def get_paper_report(
         trades = []
 
     initial_cash = DEFAULT_INITIAL_CASH
-    equity = summary.get("total_equity") or 0.0
+    positions = summary.get("positions") or []
+    # 盘中成交价是实时价，持仓若仍按历史收盘价估值，会把两边混算成虚假浮盈
+    _refresh_positions_with_live_price(positions)
+
+    cash = float(summary.get("total_cash") or 0.0)
+    market_value = sum(
+        float(item.get("last_price") or 0.0) * float(item.get("quantity") or 0.0)
+        for item in positions
+    )
+    equity = cash + market_value if positions else float(summary.get("total_equity") or 0.0)
+    summary["total_market_value"] = round(market_value, 2)
+    summary["total_equity"] = round(equity, 2)
+
     return {
         "initialized": True,
         "account": account,
@@ -218,10 +230,36 @@ def get_paper_report(
         "return_pct": round((equity - initial_cash) / initial_cash * 100, 2)
         if initial_cash > 0
         else None,
-        "positions": summary.get("positions") or [],
+        "positions": positions,
         "curve": curve,
         "trades": trades,
     }
+
+
+def _refresh_positions_with_live_price(positions: List[Dict[str, Any]]) -> None:
+    """用实时价刷新持仓现价与浮盈；取不到时保持原有收盘价。"""
+    if not positions:
+        return
+    try:
+        from src.services.cn_tracker.paper_bot_service import fetch_realtime_prices
+
+        quotes = fetch_realtime_prices(
+            [str(item.get("symbol") or "") for item in positions]
+        )
+    except Exception as exc:  # noqa: BLE001 - 拉不到就沿用收盘价
+        logger.debug("刷新实时价失败: %s", exc)
+        return
+
+    for item in positions:
+        quote = quotes.get(str(item.get("symbol") or "")) or {}
+        price = quote.get("price")
+        cost = float(item.get("avg_cost") or 0.0)
+        quantity = float(item.get("quantity") or 0.0)
+        if not price or float(price) <= 0:
+            continue
+        item["last_price"] = float(price)
+        if cost > 0:
+            item["unrealized_pnl"] = round((float(price) - cost) * quantity, 2)
 
 
 def build_paper_report_text(report: Dict[str, Any]) -> str:
