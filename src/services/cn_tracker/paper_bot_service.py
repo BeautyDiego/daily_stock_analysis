@@ -43,8 +43,11 @@ from src.services.cn_tracker.paper_trading_service import (
 )
 from src.services.cn_tracker.risk_control import (
     adjusted_slots,
+    atr_percent_from_db,
     evaluate_account_risk,
     evaluate_market_regime,
+    stop_loss_pct,
+    take_profit_pct,
 )
 from src.services.portfolio_service import PortfolioService
 from src.storage import (
@@ -511,11 +514,16 @@ def watch_intraday(
         peak_pct = (peak - cost) / cost * 100 if peak else return_pct
         drawdown = (peak - price) / peak * 100 if peak and peak > 0 else 0.0
 
+        # 阈值按 ATR 自适应：低波动标的止损更紧、高波动更宽
+        atr_pct = atr_percent_from_db(manager, code, trade_date)
+        stop_pct = stop_loss_pct(atr_pct)
+        take_pct = take_profit_pct(atr_pct)
+
         reason = ""
-        if return_pct <= HARD_STOP_LOSS_PCT:
-            reason = f"止损 {return_pct:.1f}%"
-        elif return_pct >= HARD_TAKE_PROFIT_PCT:
-            reason = f"止盈 {return_pct:+.1f}%"
+        if return_pct <= stop_pct:
+            reason = f"止损 {return_pct:.1f}%（阈值 {stop_pct:.1f}%）"
+        elif return_pct >= take_pct:
+            reason = f"止盈 {return_pct:+.1f}%（阈值 {take_pct:.1f}%）"
         elif (
             peak_pct >= TRAILING_ACTIVATE_PCT
             and drawdown >= TRAILING_DRAWDOWN_PCT

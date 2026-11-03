@@ -10,8 +10,11 @@ from src.config import Config
 from src.services.cn_tracker.risk_control import (
     MARKET_REGIME_CODE,
     adjusted_slots,
+    atr_percent_from_bars,
     evaluate_account_risk,
     evaluate_market_regime,
+    stop_loss_pct,
+    take_profit_pct,
 )
 from src.services.cn_tracker.risk_filter import filter_delisting_risk, has_delisting_risk
 from src.services.cn_tracker.paper_trading_service import slippage_rate
@@ -160,6 +163,36 @@ class RiskControlTestCase(unittest.TestCase):
         self.assertEqual(adjusted_slots(5, {"risk_off": True}), 2)
         self.assertEqual(adjusted_slots(5, {"risk_off": False}), 5)
         self.assertEqual(adjusted_slots(1, {"risk_off": True}), 1)
+
+    # ------------------------------------------------------------------
+    # ATR 自适应止损止盈
+    # ------------------------------------------------------------------
+
+    def test_stop_loss_scales_with_volatility(self):
+        self.assertAlmostEqual(stop_loss_pct(2.0), -5.0)    # 下限
+        self.assertAlmostEqual(stop_loss_pct(5.0), -10.0)
+        self.assertAlmostEqual(stop_loss_pct(10.0), -15.0)  # 上限
+        self.assertAlmostEqual(stop_loss_pct(None), -8.0)   # 兜底
+
+    def test_take_profit_scales_with_volatility(self):
+        self.assertAlmostEqual(take_profit_pct(2.0), 10.0)   # 下限
+        self.assertAlmostEqual(take_profit_pct(5.0), 20.0)
+        self.assertAlmostEqual(take_profit_pct(15.0), 40.0)  # 上限
+        self.assertAlmostEqual(take_profit_pct(None), 20.0)
+
+    def test_atr_percent_from_bars(self):
+        # 21 根 bar，TR 恒为 1.0，收盘 100.5 → ATR% ≈ 1.0
+        bars = [(101.0, 100.0, 100.5)] * 21
+        pct = atr_percent_from_bars(bars)
+        self.assertIsNotNone(pct)
+        self.assertAlmostEqual(pct, 0.995, places=2)
+
+    def test_atr_returns_none_without_enough_bars(self):
+        self.assertIsNone(atr_percent_from_bars([(1.0, 1.0, 1.0)] * 5))
+
+    def test_atr_returns_none_for_bad_close(self):
+        bars = [(101.0, 100.0, 0.0)] * 21
+        self.assertIsNone(atr_percent_from_bars(bars))
 
     # ------------------------------------------------------------------
     # 滑点分档

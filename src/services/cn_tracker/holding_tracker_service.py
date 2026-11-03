@@ -20,6 +20,10 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 import pandas as pd
 
 from src.services.cn_tracker.macro_policy_service import recent_policy_hits
+from src.services.cn_tracker.risk_control import (
+    atr_percent_from_frame,
+    stop_loss_pct,
+)
 from src.storage import (
     DatabaseManager,
     HoldingReview,
@@ -29,7 +33,9 @@ from src.storage import (
 
 logger = logging.getLogger(__name__)
 
-BENCHMARK_CODE = "sh000001"
+# 复盘超额基准：中证 1000ETF（512100）。选股池偏小盘低价，
+# 用上证指数判断"跑赢/跑输"会让结论失真（低价股与上证相关性低）。
+BENCHMARK_CODE = "512100"
 ACTIVE_STATUSES = ("watching", "holding", "reduced")
 
 # 三档阈值
@@ -250,10 +256,10 @@ def sync_daily_history(
                 .limit(50)
                 .all()
             ]
-        # 市场环境基准（沪深 300ETF）也同步入库：跌破 MA20 时降低仓位上限
+        # 两个基准也同步入库：510300 判市场环境、512100 算复盘超额
         targets = [
             code
-            for code in dict.fromkeys(tracked + recent + ["510300"])
+            for code in dict.fromkeys(tracked + recent + ["510300", BENCHMARK_CODE])
             if code
         ]
 
@@ -520,13 +526,13 @@ def _score_review(
         relative_score = 10.0
     elif excess >= 5:
         relative_score = 20.0
-        reasons.append(f"近 5 日跑赢上证 {excess:.1f} 个百分点")
+        reasons.append(f"近 5 日跑赢基准 {excess:.1f} 个百分点")
     elif excess >= 0:
         relative_score = 12.0
-        reasons.append(f"近 5 日小幅跑赢上证 {excess:.1f} 个百分点")
+        reasons.append(f"近 5 日小幅跑赢基准 {excess:.1f} 个百分点")
     else:
         relative_score = 4.0
-        reasons.append(f"近 5 日跑输上证 {abs(excess):.1f} 个百分点")
+        reasons.append(f"近 5 日跑输基准 {abs(excess):.1f} 个百分点")
 
     # --- 量能 15 ---
     if volume_ratio is None:
@@ -563,13 +569,19 @@ def _score_review(
         policy_score = 15.0
 
     # --- 风险 20 ---
+    # 止损线按 ATR 自适应：固定 -8% 对低波动股太松、对高波动股太紧
     hard_reasons: List[str] = []
-    if return_pct is not None and return_pct <= HARD_STOP_LOSS_PCT:
+    atr_pct = atr_percent_from_frame(history)
+    stop_pct = stop_loss_pct(atr_pct)
+    stop_note = (
+        f"{stop_pct:.1f}%（ATR {atr_pct:.1f}%）" if atr_pct else f"{stop_pct:.1f}%"
+    )
+    if return_pct is not None and return_pct <= stop_pct:
         risk_score = 0.0
-        hard_reasons.append(f"浮亏 {return_pct:.1f}%，触及 {HARD_STOP_LOSS_PCT:.0f}% 止损线")
-    elif return_pct is not None and return_pct <= -5:
+        hard_reasons.append(f"浮亏 {return_pct:.1f}%，触及 {stop_note} 止损线")
+    elif return_pct is not None and return_pct <= stop_pct + 3:
         risk_score = 10.0
-        reasons.append(f"浮亏 {return_pct:.1f}%，接近止损线")
+        reasons.append(f"浮亏 {return_pct:.1f}%，接近止损线 {stop_note}")
     elif close < ma20:
         risk_score = 5.0
     else:
@@ -587,7 +599,7 @@ def _score_review(
         and excess < TIME_STOP_EXCESS_PCT
     ):
         hard_reasons.append(
-            f"持有 {holding_days} 个交易日仍跑输上证 {abs(excess):.1f} 个百分点"
+            f"持有 {holding_days} 个交易日仍跑输基准 {abs(excess):.1f} 个百分点"
         )
 
     total = trend_score + relative_score + volume_score + risk_score + policy_score

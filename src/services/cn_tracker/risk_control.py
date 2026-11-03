@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from src.storage import DatabaseManager, PortfolioDailySnapshot, StockDaily
 
@@ -147,3 +147,113 @@ def adjusted_slots(base_slots: int, regime: Dict[str, Any]) -> int:
     if not regime.get("risk_off"):
         return base_slots
     return max(1, int(base_slots * RISK_OFF_SLOT_RATIO))
+
+
+# ----------------------------------------------------------------------
+# ATR 自适应的止损 / 止盈
+#
+# 固定 -8% 对低价股太紧（日波动 3–5%，两天就触及，且常是洗盘区），
+# 对高波动标的又太松。改成按 ATR 缩放，并设上下限避免极端值。
+# ----------------------------------------------------------------------
+
+ATR_PERIOD = 20
+# 止损 = 2×ATR，止盈 = 4×ATR（盈亏比约 2:1）
+ATR_STOP_MULTIPLIER = 2.0
+ATR_TAKE_PROFIT_MULTIPLIER = 4.0
+# 上下限：避免低波动标的止损过窄被噪声打掉，也避免高波动标的止损过宽
+STOP_PCT_FLOOR = 5.0
+STOP_PCT_CEIL = 15.0
+TAKE_PCT_FLOOR = 10.0
+TAKE_PCT_CEIL = 40.0
+# ATR 不可用时的兜底
+FALLBACK_STOP_LOSS_PCT = 8.0
+FALLBACK_TAKE_PROFIT_PCT = 20.0
+
+
+def atr_percent_from_bars(
+    bars: Sequence[Sequence[float]], *, period: int = ATR_PERIOD
+) -> Optional[float]:
+    """按时间正序的 ``(high, low, close)`` 序列计算 ATR 占最新收盘价的百分比。"""
+    if len(bars) < period + 1:
+        return None
+
+    true_ranges: List[float] = []
+    for index in range(1, len(bars)):
+        high, low, prev_close = bars[index][0], bars[index][1], bars[index - 1][2]
+        true_ranges.append(
+            max(high - low, abs(high - prev_close), abs(low - prev_close))
+        )
+
+    window = true_ranges[-period:]
+    if not window:
+        return None
+    atr = sum(window) / len(window)
+    last_close = float(bars[-1][2])
+    if last_close <= 0:
+        return None
+    return atr / last_close * 100
+
+
+def atr_percent_from_frame(frame: Any, *, period: int = ATR_PERIOD) -> Optional[float]:
+    """从含 ``high/low/close`` 列的日线 DataFrame 计算 ATR%。"""
+    if frame is None or getattr(frame, "empty", True):
+        return None
+    columns = set(getattr(frame, "columns", []))
+    if not {"high", "low", "close"}.issubset(columns):
+        return None
+
+    bars: List[Sequence[float]] = []
+    for _, row in frame.iterrows():
+        try:
+            high = float(row["high"])
+            low = float(row["low"])
+            close = float(row["close"])
+        except (TypeError, ValueError):
+            continue
+        if high > 0 and low > 0 and close > 0:
+            bars.append((high, low, close))
+    return atr_percent_from_bars(bars, period=period)
+
+
+def atr_percent_from_db(
+    db: DatabaseManager,
+    code: str,
+    trade_date: date,
+    *,
+    period: int = ATR_PERIOD,
+) -> Optional[float]:
+    """从 ``stock_daily`` 取最近 ``period+1`` 根日线计算 ATR%。"""
+    with db.get_session() as session:
+        rows = (
+            session.query(StockDaily.high, StockDaily.low, StockDaily.close)
+            .filter(
+                StockDaily.code == str(code),
+                StockDaily.date <= trade_date,
+            )
+            .order_by(StockDaily.date.desc())
+            .limit(period + 1)
+            .all()
+        )
+
+    bars: List[Sequence[float]] = []
+    for high, low, close in reversed(rows):
+        if high and low and close:
+            bars.append((float(high), float(low), float(close)))
+    return atr_percent_from_bars(bars, period=period)
+
+
+def stop_loss_pct(atr_pct: Optional[float]) -> float:
+    """ATR 自适应止损（负值，百分比）。ATR 不可用时退回 -8%。"""
+    if not atr_pct or atr_pct <= 0:
+        return -FALLBACK_STOP_LOSS_PCT
+    value = max(STOP_PCT_FLOOR, min(STOP_PCT_CEIL, ATR_STOP_MULTIPLIER * atr_pct))
+    return -round(value, 2)
+
+
+def take_profit_pct(atr_pct: Optional[float]) -> float:
+    """ATR 自适应止盈（正值，百分比）。ATR 不可用时退回 +20%。"""
+    if not atr_pct or atr_pct <= 0:
+        return FALLBACK_TAKE_PROFIT_PCT
+    return round(
+        max(TAKE_PCT_FLOOR, min(TAKE_PCT_CEIL, ATR_TAKE_PROFIT_MULTIPLIER * atr_pct)), 2
+    )
