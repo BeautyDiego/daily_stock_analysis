@@ -494,6 +494,9 @@ class TrackedPosition(Base):
     last_advice = Column(String(8))  # hold / reduce / exit
     last_score = Column(Float)
 
+    # 持仓期最高价：移动止盈的基准（盘中每次刷新取最大值）
+    peak_price = Column(Float)
+
     created_at = Column(DateTime, default=datetime.now, index=True)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
@@ -540,6 +543,44 @@ class HoldingReview(Base):
             'position_id', 'review_date', name='uix_holding_review_position_date'
         ),
         Index('ix_holding_review_date_advice', 'review_date', 'advice'),
+    )
+
+
+class PaperOrder(Base):
+    """模拟盘订单（盘前生成、开盘/盘中执行）。
+
+    盘前把「昨日选股的买」与「今日复盘的卖」先落成订单，开盘后按实时价成交，
+    这样成交判断是事前的，而不是收盘后回看 K 线。
+    """
+
+    __tablename__ = 'paper_orders'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    account_id = Column(
+        Integer, ForeignKey('portfolio_accounts.id'), nullable=False, index=True
+    )
+    trade_date = Column(Date, nullable=False, index=True)
+    code = Column(String(16), nullable=False, index=True)
+    name = Column(String(64))
+
+    side = Column(String(8), nullable=False)  # buy / sell
+    quantity = Column(Float, nullable=False, default=0.0)
+    signal_price = Column(Float)  # 生成订单时的参考价
+    filled_price = Column(Float)
+
+    # pending / filled / cancelled
+    status = Column(String(12), nullable=False, default='pending', index=True)
+    reason = Column(String(64))
+    note = Column(Text)
+
+    filled_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.now, index=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            'account_id', 'trade_date', 'code', 'side', name='uix_paper_order_key'
+        ),
+        Index('ix_paper_order_status_date', 'status', 'trade_date'),
     )
 
 
@@ -1621,34 +1662,44 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
         if not self._is_sqlite_engine:
             return
         inspector = inspect(self._engine)
-        if not inspector.has_table(ScreeningPick.__tablename__):
-            return
-        try:
-            existing = {
-                column["name"]
-                for column in inspector.get_columns(ScreeningPick.__tablename__)
-            }
-        except Exception as exc:  # noqa: BLE001 - 迁移失败不应阻塞启动
-            logger.warning("[CN tracker] 检查 screening_picks 列失败，已跳过: %s", exc)
-            return
+        targets = (
+            (
+                ScreeningPick.__tablename__,
+                (
+                    ("factor_scores", "TEXT"),
+                    ("policy_hits", "TEXT"),
+                    ("dedupe_note", "TEXT"),
+                    ("strategy_version", "VARCHAR(64)"),
+                ),
+            ),
+            (
+                TrackedPosition.__tablename__,
+                (("industry", "VARCHAR(64)"), ("peak_price", "FLOAT")),
+            ),
+        )
 
-        for name, sql_type in (
-            ("factor_scores", "TEXT"),
-            ("policy_hits", "TEXT"),
-            ("dedupe_note", "TEXT"),
-            ("strategy_version", "VARCHAR(64)"),
-        ):
-            if name in existing:
+        for table, columns in targets:
+            if not inspector.has_table(table):
                 continue
             try:
-                with self._engine.begin() as connection:
-                    connection.exec_driver_sql(
-                        f"ALTER TABLE {ScreeningPick.__tablename__} "
-                        f"ADD COLUMN {name} {sql_type}"
-                    )
-            except OperationalError as exc:
-                if not self._is_sqlite_duplicate_column_error(exc, name):
-                    raise
+                existing = {
+                    column["name"] for column in inspector.get_columns(table)
+                }
+            except Exception as exc:  # noqa: BLE001 - 迁移失败不应阻塞启动
+                logger.warning("[CN tracker] 检查 %s 列失败，已跳过: %s", table, exc)
+                continue
+
+            for name, sql_type in columns:
+                if name in existing:
+                    continue
+                try:
+                    with self._engine.begin() as connection:
+                        connection.exec_driver_sql(
+                            f"ALTER TABLE {table} ADD COLUMN {name} {sql_type}"
+                        )
+                except OperationalError as exc:
+                    if not self._is_sqlite_duplicate_column_error(exc, name):
+                        raise
 
     def _ensure_schema_migration_record(self) -> None:
         session = self._SessionLocal()

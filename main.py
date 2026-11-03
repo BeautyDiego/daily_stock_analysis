@@ -566,6 +566,31 @@ def parse_arguments() -> argparse.Namespace:
         help='输出模拟盘概览（净值、持仓、近期成交）'
     )
 
+    # === 模拟盘自动交易 bot ===
+    parser.add_argument(
+        '--paper-plan',
+        action='store_true',
+        help='模拟盘：盘前生成当日订单（建议 09:25 执行）'
+    )
+
+    parser.add_argument(
+        '--paper-execute',
+        action='store_true',
+        help='模拟盘：开盘按实时价执行订单（建议 09:35 执行）'
+    )
+
+    parser.add_argument(
+        '--paper-watch',
+        action='store_true',
+        help='模拟盘：盘中检查止损止盈（建议 10:00/11:00/13:00/14:00 执行）'
+    )
+
+    parser.add_argument(
+        '--paper-settle',
+        action='store_true',
+        help='模拟盘：收盘结算并推送简报（建议 15:15 执行）'
+    )
+
     return parser.parse_args()
 
 
@@ -1602,6 +1627,10 @@ def _skips_stock_entry(args: argparse.Namespace, config: Config) -> bool:
         or getattr(args, "paper_init", False)
         or getattr(args, "paper_run", False)
         or getattr(args, "paper_report", False)
+        or getattr(args, "paper_plan", False)
+        or getattr(args, "paper_execute", False)
+        or getattr(args, "paper_watch", False)
+        or getattr(args, "paper_settle", False)
         or getattr(args, "market_review", False)
         or getattr(args, "serve_only", False)
         or getattr(args, "webui_only", False)
@@ -2090,6 +2119,62 @@ def main() -> int:
             else:
                 print(report.get("message") or "模拟盘暂无数据")
             return 0 if report.get("initialized") else 1
+
+        # 模式0.15: 模拟盘盘前下单
+        if getattr(args, 'paper_plan', False):
+            logger.info("模式: 模拟盘盘前下单")
+            from src.services.cn_tracker.paper_bot_service import plan_orders
+
+            stats = plan_orders()
+            logger.info(
+                f"模拟盘下单完成: date={stats.get('trade_date')} "
+                f"buys={len(stats.get('buys') or [])} sells={len(stats.get('sells') or [])} "
+                f"skipped={stats.get('skipped')}"
+            )
+            return 0
+
+        # 模式0.16: 模拟盘开盘执行
+        if getattr(args, 'paper_execute', False):
+            logger.info("模式: 模拟盘开盘执行")
+            from src.services.cn_tracker.paper_bot_service import execute_open
+
+            stats = execute_open()
+            logger.info(
+                f"模拟盘开盘执行完成: date={stats.get('trade_date')} "
+                f"filled={len(stats.get('filled') or [])} "
+                f"cancelled={len(stats.get('cancelled') or [])}"
+            )
+            return 0
+
+        # 模式0.17: 模拟盘盘中风控
+        if getattr(args, 'paper_watch', False):
+            logger.info("模式: 模拟盘盘中风控")
+            from src.services.cn_tracker.paper_bot_service import watch_intraday
+
+            stats = watch_intraday()
+            triggered = stats.get("triggered") or []
+            logger.info(
+                f"模拟盘盘中检查完成: date={stats.get('trade_date')} triggered={len(triggered)}"
+            )
+            for item in triggered:
+                logger.info(
+                    f"风控卖出: {item.get('code')} {item.get('quantity')}股 "
+                    f"@{item.get('price')}（{item.get('reason')}）"
+                )
+            return 0
+
+        # 模式0.18: 模拟盘收盘结算
+        if getattr(args, 'paper_settle', False):
+            logger.info("模式: 模拟盘收盘结算")
+            from src.services.cn_tracker.paper_bot_service import settle
+
+            stats = settle()
+            logger.info(
+                f"模拟盘收盘结算完成: date={stats.get('trade_date')} "
+                f"equity={stats.get('equity')} today={stats.get('today_pct')}% "
+                f"total={stats.get('total_pct')}%"
+            )
+            return 0
 
         # 模式1: 仅大盘复盘
         if args.market_review:
