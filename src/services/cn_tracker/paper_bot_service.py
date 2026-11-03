@@ -255,7 +255,7 @@ def plan_orders(
             continue
         _upsert_order(
             manager, account_id, trade_date, code, name, "buy", quantity,
-            reference, "选股建仓",
+            reference, f"选股 {signal_date.isoformat()}",
         )
         result["buys"].append(
             {
@@ -561,6 +561,7 @@ def settle(
     initial = float(os.getenv("PAPER_INITIAL_CASH", "20000") or 20000)
     total_pct = (equity - initial) / initial * 100 if initial > 0 else None
 
+    holdings = _holdings_detail(manager, account_id)
     result = {
         "trade_date": trade_date.isoformat(),
         "equity": round(equity, 2),
@@ -568,7 +569,9 @@ def settle(
         "market_value": round(float(snapshot.get("total_market_value") or 0.0), 2),
         "today_pct": round(today_pct, 2) if today_pct is not None else None,
         "total_pct": round(total_pct, 2) if total_pct is not None else None,
-        "positions": len(_load_positions(manager, account_id)),
+        "positions": len(holdings),
+        "holdings": holdings,
+        "triggered": _today_triggered(manager, account_id, trade_date),
         "trades": _today_trade_summary(manager, account_id, trade_date),
     }
     if notify:
@@ -596,52 +599,87 @@ def notify_open_brief(result: Dict[str, Any], *, db: Optional[DatabaseManager] =
         return False
 
     filled = result.get("filled") or []
-    cancelled = result.get("cancelled") or []
     equity, today_pct = _current_equity_and_pct(manager, account_id)
+    holdings = _holdings_detail(manager, account_id)
 
-    lines = [f"【模拟盘·开盘】{_md_date(result.get('trade_date'))}"]
-    lines.append(_brief_trades(filled))
-    if cancelled:
-        lines.append(f"放弃 {len(cancelled)} 笔：" + "、".join(
-            f"{item.get('code')}({item.get('why')})" for item in cancelled[:3]
-        ))
+    lines = [f"【模拟盘·开盘】{_md_date(result.get('trade_date'))}", ""]
+    lines.append("【成交】")
+    lines.extend(_brief_trades(filled))
+    lines.append("")
+    lines.append("【账户】")
     lines.append(
-        f"持仓 {len(_load_positions(manager, account_id))} 只｜"
-        f"总资产 {_wan(equity)}｜今日 {_pct(today_pct)}"
+        f"持仓 {len(holdings)} 只｜市值 {_yuan(sum(h.get('price', 0) * h.get('quantity', 0) for h in holdings))}"
+        f"｜现金 {_yuan(_current_cash(manager, account_id, date.fromisoformat(result['trade_date'])))}"
     )
-    return _send("\n".join(line for line in lines if line))
+    lines.append(f"总资产 {_yuan(equity)}｜今日 {_pct(today_pct)}")
+    return _send("\n".join(lines))
 
 
 def notify_close_brief(result: Dict[str, Any], *, db: Optional[DatabaseManager] = None) -> bool:
-    """收盘简报：今日战况 + 累计盈亏。"""
+    """收盘简报：今日战况 + 持仓浮盈（百分比）+ 账户。"""
     trades = result.get("trades") or {}
-    lines = [f"【模拟盘·收盘】{_md_date(result.get('trade_date'))}"]
+    lines = [f"【模拟盘·收盘】{_md_date(result.get('trade_date'))}", ""]
     lines.append(
-        f"今日 买{trades.get('buy', 0)} 卖{trades.get('sell', 0)}｜"
-        f"持仓 {result.get('positions', 0)} 只"
+        f"今日成交：买 {trades.get('buy', 0)}｜卖 {trades.get('sell', 0)}"
+    )
+    triggered = result.get("triggered") or []
+    lines.append(
+        "盘中触发："
+        + (
+            "、".join(
+                f"{item.get('code')}（{item.get('reason')}）" for item in triggered[:3]
+            )
+            if triggered
+            else "无"
+        )
+    )
+
+    holdings = result.get("holdings") or []
+    lines.append("")
+    if holdings:
+        lines.append("【持仓】")
+        for item in holdings:
+            pct = item.get("pnl_pct")
+            pct_text = f"{pct:+.2f}%" if pct is not None else "--"
+            lines.append(
+                f"{item.get('name') or ''} {item.get('code')}  "
+                f"{int(item.get('quantity') or 0)}股  "
+                f"{float(item.get('cost') or 0):.2f} → "
+                f"{float(item.get('price') or 0):.2f}  {pct_text}"
+            )
+    else:
+        lines.append("当前空仓")
+
+    lines.append("")
+    lines.append("【账户】")
+    lines.append(
+        f"总资产 {_yuan(result.get('equity'))}"
+        f"（现金 {_yuan(result.get('cash'))} + 市值 {_yuan(result.get('market_value'))}）"
     )
     lines.append(
-        f"总资产 {_wan(result.get('equity'))}｜"
-        f"今日 {_pct(result.get('today_pct'))}｜"
-        f"累计 {_pct(result.get('total_pct'))}"
+        f"今日 {_pct(result.get('today_pct'))}｜累计 {_pct(result.get('total_pct'))}"
     )
     return _send("\n".join(lines))
 
 
-def _brief_trades(filled: Sequence[Dict[str, Any]]) -> str:
+def _brief_trades(filled: Sequence[Dict[str, Any]]) -> List[str]:
     if not filled:
-        return "今日无成交"
-    parts: List[str] = []
-    for side, label in (("buy", "买"), ("sell", "卖")):
+        return ["买入 无", "卖出 无"]
+    lines: List[str] = []
+    for side, label in (("buy", "买入"), ("sell", "卖出")):
         items = [item for item in filled if item.get("side") == side]
         if not items:
+            lines.append(f"{label} 无")
             continue
-        detail = "、".join(
-            f"{item.get('code')} {int(item.get('quantity') or 0)}股@{item.get('price')}"
-            for item in items[:4]
-        )
-        parts.append(f"{label} {len(items)}：" + detail)
-    return "｜".join(parts)
+        for item in items[:4]:
+            name = item.get("name") or ""
+            lines.append(
+                f"{label} {name} {item.get('code')}  "
+                f"{int(item.get('quantity') or 0)}股 @{item.get('price')}"
+            )
+            if item.get("reason"):
+                lines.append(f"  依据：{item.get('reason')}")
+    return lines
 
 
 def _send(content: str) -> bool:
@@ -658,12 +696,88 @@ def _send(content: str) -> bool:
     return bool(ok)
 
 
-def _wan(value: Any) -> str:
+def _yuan(value: Any) -> str:
     try:
-        number = float(value or 0.0)
+        return f"{float(value or 0.0):.0f}"
     except (TypeError, ValueError):
         return "--"
-    return f"{number / 10000:.2f} 万"
+
+
+def _holdings_detail(
+    manager: DatabaseManager, account_id: int
+) -> List[Dict[str, Any]]:
+    """持仓明细：成本、现价、浮盈百分比（供收盘简报）。"""
+    positions = _load_positions(manager, account_id)
+    names = _tracked_names(manager, list(positions.keys()))
+    details: List[Dict[str, Any]] = []
+    for code, position in positions.items():
+        cost = float(position.get("avg_cost") or 0.0)
+        price = float(position.get("last_price") or 0.0)
+        pct = (price - cost) / cost * 100 if cost > 0 and price > 0 else None
+        details.append(
+            {
+                "code": code,
+                "name": names.get(code) or "",
+                "quantity": float(position.get("quantity") or 0.0),
+                "cost": cost,
+                "price": price,
+                "pnl_pct": round(pct, 2) if pct is not None else None,
+            }
+        )
+    details.sort(key=lambda item: item.get("pnl_pct") or 0.0, reverse=True)
+    return details
+
+
+def _tracked_names(manager: DatabaseManager, codes: Sequence[str]) -> Dict[str, str]:
+    """持仓名称：优先跟踪表，缺失时回退选股表（跟踪表的 name 可能为空）。"""
+    normalized = [str(code) for code in codes if str(code)]
+    if not normalized:
+        return {}
+    names: Dict[str, str] = {}
+    with manager.get_session() as session:
+        for code, name in (
+            session.query(TrackedPosition.code, TrackedPosition.name)
+            .filter(TrackedPosition.code.in_(normalized))
+            .all()
+        ):
+            if name:
+                names.setdefault(str(code), str(name))
+
+        missing = [code for code in normalized if code not in names]
+        if missing:
+            for code, name in (
+                session.query(ScreeningPick.code, ScreeningPick.name)
+                .filter(ScreeningPick.code.in_(missing))
+                .order_by(ScreeningPick.pick_date.desc())
+                .all()
+            ):
+                if name:
+                    names.setdefault(str(code), str(name))
+    return names
+
+
+def _today_triggered(
+    manager: DatabaseManager, account_id: int, trade_date: date
+) -> List[Dict[str, Any]]:
+    """当日由风控触发的卖出（止损/止盈），供收盘简报展示。"""
+    from src.storage import PortfolioTrade
+
+    with manager.get_session() as session:
+        rows = (
+            session.query(PortfolioTrade.symbol, PortfolioTrade.note)
+            .filter(
+                PortfolioTrade.account_id == account_id,
+                PortfolioTrade.trade_date == trade_date,
+                PortfolioTrade.side == "sell",
+            )
+            .all()
+        )
+    triggered: List[Dict[str, Any]] = []
+    for symbol, note in rows:
+        text = str(note or "")
+        if "止损" in text or "止盈" in text:
+            triggered.append({"code": str(symbol), "reason": text})
+    return triggered
 
 
 def _pct(value: Any) -> str:
