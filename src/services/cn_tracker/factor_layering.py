@@ -120,29 +120,50 @@ def _load_panel(
             .all()
         )
 
-    records = [
-        {
-            "code": str(row[0]),
-            "date": row[1],
-            "open": float(row[2] or 0),
-            "high": float(row[3] or 0),
-            "low": float(row[4] or 0),
-            "close": float(row[5] or 0),
-            "volume": float(row[6] or 0),
-            "amount": float(row[7] or 0),
-        }
-        for row in rows
-    ]
-    if not records:
+    if not rows:
         return {}
 
-    frame = pd.DataFrame(records)
+    # 全市场约 60 万行：用 from_records 直接构造（比先转 dict 省一半内存）
+    frame = pd.DataFrame.from_records(
+        rows,
+        columns=[
+            "code",
+            "date",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "amount",
+        ],
+    )
+    frame["code"] = frame["code"].astype(str)
+    for column in ("open", "high", "low", "close", "volume", "amount"):
+        frame[column] = pd.to_numeric(frame[column], errors="coerce").fillna(0.0)
+
     panel: Dict[str, pd.DataFrame] = {}
-    for code, group in frame.groupby("code"):
+    for code, group in frame.groupby("code", sort=False):
         if len(group) < MIN_HISTORY_BARS:
             continue
         panel[str(code)] = group.reset_index(drop=True)
     return panel
+
+
+def _load_all_codes(
+    db: DatabaseManager, start_date: date, *, min_days: int = 60
+) -> List[str]:
+    """从已入库的日线里取全部代码（要求覆盖足够天数），用于全市场回测。"""
+    from sqlalchemy import func
+
+    with db.get_session() as session:
+        rows = (
+            session.query(StockDaily.code, func.count(StockDaily.id))
+            .filter(StockDaily.date >= start_date)
+            .group_by(StockDaily.code)
+            .having(func.count(StockDaily.id) >= min_days)
+            .all()
+        )
+    return [str(row[0]) for row in rows]
 
 
 def _factor_series(frame: pd.DataFrame, factor: str) -> pd.Series:
@@ -214,14 +235,17 @@ def run_factor_layering(
 ) -> Dict[str, Any]:
     """跑分层回测，返回每个因子的分层收益与 IC。"""
     manager = db or DatabaseManager.get_instance()
+    start_date = date.today() - timedelta(days=lookback_days)
     pool = [str(code) for code in (codes or [])]
+    if not pool and pool_size <= 0:
+        # pool_size=0 表示全市场：直接用已入库的日线，排除池子偏差
+        pool = _load_all_codes(manager, start_date)
+        logger.info("全市场回测: %s 只", len(pool))
     if not pool:
-        pool = build_pool(manager, pool_size=pool_size)
+        pool = build_pool(manager, pool_size=max(1, pool_size))
 
     if not pool:
         return {"error": "empty_pool", "factors": {}}
-
-    start_date = date.today() - timedelta(days=lookback_days)
     panel = _load_panel(manager, pool, start_date)
 
     # 数据不足时补同步（首次跑会很慢，约 1–2 分钟）

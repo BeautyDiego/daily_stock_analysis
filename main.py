@@ -618,6 +618,19 @@ def parse_arguments() -> argparse.Namespace:
         help='回看天数，默认 120'
     )
 
+    parser.add_argument(
+        '--sync-universe',
+        action='store_true',
+        help='同步全市场日线（Tushare 按交易日批量，供因子回测）'
+    )
+
+    parser.add_argument(
+        '--universe-days',
+        type=int,
+        default=120,
+        help='同步的交易日数，默认 120'
+    )
+
     return parser.parse_args()
 
 
@@ -1660,6 +1673,7 @@ def _skips_stock_entry(args: argparse.Namespace, config: Config) -> bool:
         or getattr(args, "paper_settle", False)
         or getattr(args, "paper_trade_now", False)
         or getattr(args, "factor_layering", False)
+        or getattr(args, "sync_universe", False)
         or getattr(args, "market_review", False)
         or getattr(args, "serve_only", False)
         or getattr(args, "webui_only", False)
@@ -2192,6 +2206,21 @@ def main() -> int:
                 )
             return 0
 
+        # 模式0.21: 全市场日线同步
+        if getattr(args, 'sync_universe', False):
+            logger.info("模式: 全市场日线同步")
+            from src.services.cn_tracker.universe_sync import sync_universe_daily
+
+            stats = sync_universe_daily(
+                days=int(getattr(args, 'universe_days', 120) or 120)
+            )
+            logger.info(
+                f"全市场日线同步: dates={stats.get('dates')} saved={stats.get('saved')} "
+                f"empty={stats.get('empty')} errors={stats.get('errors')} "
+                f"error={stats.get('error')}"
+            )
+            return 0 if not stats.get("error") else 1
+
         # 模式0.20: 因子分层回测
         if getattr(args, 'factor_layering', False):
             logger.info("模式: 因子分层回测")
@@ -2201,8 +2230,9 @@ def main() -> int:
             )
 
             stats = run_factor_layering(
-                pool_size=int(getattr(args, 'layering_pool', 300) or 300),
-                lookback_days=int(getattr(args, 'layering_days', 120) or 120),
+                # pool_size=0 表示全市场（走已入库日线），不能用 or 兜底
+                pool_size=int(getattr(args, 'layering_pool', 300)),
+                lookback_days=int(getattr(args, 'layering_days', 120)),
             )
             print(build_layering_report(stats))
             return 0 if not stats.get("error") else 1
