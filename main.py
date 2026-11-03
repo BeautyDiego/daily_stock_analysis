@@ -591,6 +591,12 @@ def parse_arguments() -> argparse.Namespace:
         help='模拟盘：收盘结算并推送简报（建议 15:15 执行）'
     )
 
+    parser.add_argument(
+        '--paper-trade-now',
+        action='store_true',
+        help='模拟盘：用当前最新信号立即建仓（人工干预，允许当天信号、不限制高开）'
+    )
+
     return parser.parse_args()
 
 
@@ -1631,6 +1637,7 @@ def _skips_stock_entry(args: argparse.Namespace, config: Config) -> bool:
         or getattr(args, "paper_execute", False)
         or getattr(args, "paper_watch", False)
         or getattr(args, "paper_settle", False)
+        or getattr(args, "paper_trade_now", False)
         or getattr(args, "market_review", False)
         or getattr(args, "serve_only", False)
         or getattr(args, "webui_only", False)
@@ -2161,6 +2168,21 @@ def main() -> int:
                     f"风控卖出: {item.get('code')} {item.get('quantity')}股 "
                     f"@{item.get('price')}（{item.get('reason')}）"
                 )
+            return 0
+
+        # 模式0.19: 模拟盘手动立即建仓（人工干预）
+        if getattr(args, 'paper_trade_now', False):
+            logger.info("模式: 模拟盘手动立即建仓")
+            from src.services.cn_tracker.paper_bot_service import trade_now
+
+            stats = trade_now()
+            plan = stats.get("plan") or {}
+            logger.info(
+                f"模拟盘手动建仓完成: date={stats.get('trade_date')} "
+                f"filled={len(stats.get('filled') or [])} "
+                f"cancelled={len(stats.get('cancelled') or [])} "
+                f"skipped={plan.get('skipped')}"
+            )
             return 0
 
         # 模式0.18: 模拟盘收盘结算

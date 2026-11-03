@@ -283,6 +283,39 @@ class PaperBotTestCase(unittest.TestCase):
         self.assertIn("移动止盈", stats["triggered"][0]["reason"])
 
     # ------------------------------------------------------------------
+    # 手动立即建仓
+    # ------------------------------------------------------------------
+
+    def test_trade_now_uses_same_day_signal(self):
+        """手动建仓可以直接用当天的选股信号（不受 T+1 限制）。"""
+        trade_date = date(2026, 11, 3)
+        self._add_pick("600016", "民生银行", 3.5, trade_date, rank=1)
+        ensure_paper_account(initial_cash=20000, db=self.db)
+
+        payload = _tencent_payload("600016", price=3.52, prev_close=3.5, change_pct=0.57)
+        with patch("requests.get", return_value=_FakeResponse(payload)), patch.object(
+            paper_bot_service, "_send", lambda *_args, **_kwargs: True
+        ):
+            stats = paper_bot_service.trade_now(as_of=trade_date, db=self.db)
+
+        self.assertEqual(len(stats["filled"]), 1)
+        self.assertEqual(stats["filled"][0]["side"], "buy")
+
+    def test_trade_now_ignores_open_gap_threshold(self):
+        """手动建仓不套用高开 3% 的机械阈值。"""
+        trade_date = date(2026, 11, 4)
+        self._add_pick("600016", "民生银行", 3.5, trade_date, rank=1)
+        ensure_paper_account(initial_cash=20000, db=self.db)
+
+        payload = _tencent_payload("600016", price=3.71, prev_close=3.5, change_pct=6.0)
+        with patch("requests.get", return_value=_FakeResponse(payload)), patch.object(
+            paper_bot_service, "_send", lambda *_args, **_kwargs: True
+        ):
+            stats = paper_bot_service.trade_now(as_of=trade_date, db=self.db)
+
+        self.assertEqual(len(stats["filled"]), 1)
+
+    # ------------------------------------------------------------------
     # 收盘结算
     # ------------------------------------------------------------------
 

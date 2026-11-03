@@ -148,9 +148,16 @@ def fetch_realtime_prices(
 
 
 def plan_orders(
-    *, as_of: Optional[date] = None, db: Optional[DatabaseManager] = None
+    *,
+    as_of: Optional[date] = None,
+    db: Optional[DatabaseManager] = None,
+    allow_same_day: bool = False,
+    ignore_age: bool = False,
 ) -> Dict[str, Any]:
-    """盘前生成当日订单：卖出按复盘建议，买入按昨日选股。"""
+    """盘前生成当日订单：卖出按复盘建议，买入按昨日选股。
+
+    ``allow_same_day`` / ``ignore_age`` 仅供手动立即建仓使用。
+    """
     manager = db or DatabaseManager.get_instance()
     trade_date = as_of or date.today()
     account = ensure_paper_account(db=manager)
@@ -202,12 +209,14 @@ def plan_orders(
             {"code": code, "quantity": quantity, "advice": advice, "reason": reason}
         )
 
-    # 2) 买单：严格早于当日的最近一个选股日
-    signal_date = _latest_pick_date_before(manager, trade_date)
+    # 2) 买单：默认取严格早于当日的最近一个选股日；手动模式下允许当天
+    signal_date = _latest_pick_date(
+        manager, trade_date, include_same_day=allow_same_day
+    )
     if signal_date is None:
         result["skipped"].append("no_signal")
         return result
-    if (trade_date - signal_date).days > MAX_SIGNAL_AGE_DAYS:
+    if not ignore_age and (trade_date - signal_date).days > MAX_SIGNAL_AGE_DAYS:
         result["skipped"].append(f"stale_signal:{signal_date}")
         return result
 
@@ -287,8 +296,12 @@ def execute_open(
     as_of: Optional[date] = None,
     db: Optional[DatabaseManager] = None,
     notify: bool = True,
+    skip_gap_check: bool = False,
 ) -> Dict[str, Any]:
-    """按实时价执行待成交订单：先卖后买，高开过多的买单放弃。"""
+    """按实时价执行待成交订单：先卖后买，高开过多的买单放弃。
+
+    ``skip_gap_check`` 供手动立即建仓使用（人工决策不套机械阈值）。
+    """
     manager = db or DatabaseManager.get_instance()
     trade_date = as_of or date.today()
     account = ensure_paper_account(db=manager)
@@ -351,7 +364,7 @@ def execute_open(
             gap = (price - prev_close) / prev_close * 100 if prev_close else 0.0
             change_pct = quote.get("change_pct")
 
-            if side == "buy" and gap > OPEN_GAP_MAX_PCT:
+            if side == "buy" and not skip_gap_check and gap > OPEN_GAP_MAX_PCT:
                 _mark_order(manager, order["id"], "cancelled", note=f"高开 {gap:.1f}%")
                 result["cancelled"].append({**order, "why": f"高开 {gap:.1f}% 放弃"})
                 continue
@@ -905,18 +918,58 @@ def _mark_order(
         session.commit()
 
 
-def _latest_pick_date_before(manager: DatabaseManager, trade_date: date) -> Optional[date]:
+def _latest_pick_date(
+    manager: DatabaseManager,
+    trade_date: date,
+    *,
+    include_same_day: bool = False,
+) -> Optional[date]:
+    """最近一个选股日。``include_same_day`` 用于手动立即建仓。"""
     with manager.get_session() as session:
-        row = (
-            session.query(ScreeningPick.pick_date)
-            .filter(
-                ScreeningPick.market == "cn",
-                ScreeningPick.pick_date < trade_date,
-            )
-            .order_by(ScreeningPick.pick_date.desc())
-            .first()
+        query = session.query(ScreeningPick.pick_date).filter(
+            ScreeningPick.market == "cn"
         )
+        if include_same_day:
+            query = query.filter(ScreeningPick.pick_date <= trade_date)
+        else:
+            query = query.filter(ScreeningPick.pick_date < trade_date)
+        row = query.order_by(ScreeningPick.pick_date.desc()).first()
     return row[0] if row else None
+
+
+def trade_now(
+    *,
+    as_of: Optional[date] = None,
+    db: Optional[DatabaseManager] = None,
+    notify: bool = True,
+) -> Dict[str, Any]:
+    """手动立即建仓：用「当前最新信号」按实时价成交。
+
+    与 cron 流程的差别，仅用于人工干预：
+
+    - 信号取最近的选股日（**允许是当天**），不受 T+1 与 10 天时效约束；
+    - 跳过「高开 3% 放弃」，因为这是主动决策，不是机械执行；
+    - 剩余仓位与现金约束仍然生效，不会透支。
+    """
+    manager = db or DatabaseManager.get_instance()
+    trade_date = as_of or date.today()
+
+    plan = plan_orders(
+        as_of=trade_date, db=manager, allow_same_day=True, ignore_age=True
+    )
+    result = execute_open(
+        as_of=trade_date, db=manager, notify=False, skip_gap_check=True
+    )
+    result["plan"] = plan
+    if notify:
+        notify_open_brief(result, db=manager)
+    logger.info(
+        "模拟盘手动建仓: date=%s filled=%s cancelled=%s",
+        trade_date.isoformat(),
+        len(result.get("filled") or []),
+        len(result.get("cancelled") or []),
+    )
+    return result
 
 
 def _last_equity(manager: DatabaseManager, account_id: int, trade_date: date) -> float:
