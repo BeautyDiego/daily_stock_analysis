@@ -574,6 +574,9 @@ Tushare stock_basic.industry  ──┐
 **前端产物不在代码挂载范围内**：`src` / `api` / `main.py` 是挂载的，改完后端无需重建；
 但前端构建产物在 `/app/static`（镜像内），改前端后需要：
 
+> 本系统已知缺陷的分层清单、P0/P1/P2 改进路线、实盘接入条件与放行标准，见
+> [`docs/cn-trading-improvement-plan.md`](cn-trading-improvement-plan.md)。
+
 ```bash
 cd apps/dsa-web && npm run build            # 产物输出到项目根 static/
 scp -r static <host>:/opt/dsa-pickboard/

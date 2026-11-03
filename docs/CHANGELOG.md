@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - [新功能] 新增模拟盘看板页 `/paper`（`api/v1/endpoints/paper.py` + `apps/dsa-web/src/pages/PaperPage.tsx`）：总资产与收益卡片、SVG 净值曲线、持仓表（成本/现价/浮盈）、近期成交与风控参数。
 
+- [文档] 新增《A 股交易系统改进路线》（`docs/cn-trading-improvement-plan.md`）：分层列出策略/执行/验证/尾部风险四类缺陷，给出 P0（组合风控、市场环境过滤、成交时点、滑点分档、T+1、行业映射、退市风险剔除）、P1（因子分层回测、ATR 自适应止损止盈、分批止盈、放宽价格带、政策 A/B、基准改中证 1000）、P2（券商接口、订单状态机、每日对账）三阶段任务，以及实盘放行标准与时间表。
+
 - [改进] A 股行业归属改用真实分类：`--sync-daily` 会生成 `data/screening/industry_map.csv`（Tushare `stock_basic` 优先、新浪行业板块兜底），选股管线经 `INDUSTRY_MAP_FILES` 填充快照 `industry`，名称关键词推断降为最后兜底。
 
 - [文档] 新增《国内 A 股股票分析与持仓跟踪系统设计说明》（`docs/cn-holding-tracker-design.md`）：明确纯 A 股边界、每日选股漏斗与因子权重、政策加成规则、跨日去重与行业分散、两层复盘评分卡与三档持有建议、四张数据表结构、模块输入输出与调度时序。
