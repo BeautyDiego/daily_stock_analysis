@@ -4,7 +4,7 @@
 name: balanced_alpha
 display_name: 均衡多因子
 description: 综合估值、资金、动量、稳定性的通用候选发现策略
-version: "1.1"
+version: "1.2"
 category: framework
 tags: [multi_factor, balanced, llm_friendly]
 analysis_skills: [bull_trend]
@@ -34,15 +34,23 @@ screening:
     price_min: 3
     price_max: 15
   tech_weight: 0.35
+  # 权重依据全市场因子分层回测（2026-11-03，5532 只 × 120 个交易日，持有 5 日）：
+  #   低波动 stability  正向有效：IC +0.11，IC>0 比例 73%
+  #   成交额 liquidity  强反向  ：IC -0.11，IC>0 比例 26%
+  #   20 日动量 momentum 反向    ：IC -0.09
+  #   量比 activity     反向     ：IC -0.05
+  #   近 5 日动量/反转   无区分度 ：IC |0.007|
+  # 结论：原来「动量 + 流动性 + 活跃度」合计 53% 的权重押在反向因子上，
+  # 现转向「低波动 + 估值」，未验证的 theme_heat / size 小幅提权。
   factor_weights:
-    value: 0.22
-    liquidity: 0.18
-    momentum: 0.20
-    activity: 0.15
-    stability: 0.12
+    value: 0.30
+    stability: 0.28
+    size: 0.12
+    theme_heat: 0.10
+    momentum: 0.05
+    liquidity: 0.05
+    activity: 0.05
     reversal: 0.05
-    theme_heat: 0.05
-    size: 0.03
   scoring_profile:
     momentum_chase_start_pct: 5.5
     momentum_chase_penalty_slope: 12.0

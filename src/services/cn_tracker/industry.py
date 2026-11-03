@@ -71,6 +71,22 @@ def infer_industry(code: str, name: str) -> str:
     return ""
 
 
+# 粗分类名称：新浪行业把银行/保险/证券合并为「金融行业」，
+# 与 Tushare 的细分「银行」混用会让行业上限失效——实测 4 只银行
+# 被拆成「银行 2 + 金融行业 2」全部通过上限。
+COARSE_INDUSTRY_NAMES = {"金融行业", "金融"}
+
+
+def normalize_industry(industry: str, code: str, name: str) -> str:
+    """把粗分类归一：用证券简称细分回具体行业（银行/保险/证券）。"""
+    text = str(industry or "").strip()
+    if not text:
+        return ""
+    if text in COARSE_INDUSTRY_NAMES:
+        return infer_industry(code, name) or text
+    return text
+
+
 def fill_missing_industries(
     candidates: Sequence[dict],
 ) -> Sequence[dict]:
@@ -81,10 +97,13 @@ def fill_missing_industries(
     才退回名称关键词推断。
     """
     for item in candidates:
-        if not item.get("industry"):
-            item["industry"] = infer_industry(
-                str(item.get("code") or ""), str(item.get("name") or "")
-            )
+        code = str(item.get("code") or "")
+        name = str(item.get("name") or "")
+        industry = str(item.get("industry") or "")
+        if industry:
+            item["industry"] = normalize_industry(industry, code, name)
+        else:
+            item["industry"] = infer_industry(code, name)
     return candidates
 
 

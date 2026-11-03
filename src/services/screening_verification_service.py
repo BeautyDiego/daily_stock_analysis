@@ -96,7 +96,7 @@ class ScreeningVerificationService:
         try:
             from src.services import screening_service as _screening_module
 
-            _screening_module.DSA_SCREENING_LLM_MAX_CANDIDATES = 30
+            _screening_module.DSA_SCREENING_LLM_MAX_CANDIDATES = 60
         except Exception as exc:  # noqa: BLE001 - 调整失败时退回默认候选池
             logger.debug("调整选股候选池上限失败: %s", exc)
 
@@ -127,9 +127,10 @@ class ScreeningVerificationService:
                 "pick_date": market_pick_date.isoformat(),
             }
             try:
-                # A 股多取候选，给「政策加成 + 跨日去重 + 行业分散」留足空间：
-                # 因子打分容易集中在同一行业，候选太少会导致分散后凑不满 Top N
-                candidate_limit = top_n * 6 if market == "cn" else top_n
+                # A 股多取候选，给「政策加成 + 跨日去重 + 行业分散」留足空间。
+                # 调权后「低波动 + 估值」占 58%，候选高度偏向银行/公用事业，
+                # 候选池 30 只在行业上限 2 之下常常凑不满 5 只，故放宽到 12 倍。
+                candidate_limit = top_n * 12 if market == "cn" else top_n
                 payload = screening.screen(
                     strategy=strategy or self._default_strategy(screening, market),
                     market=market,
