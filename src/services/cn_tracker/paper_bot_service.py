@@ -605,41 +605,53 @@ def settle(
 
 
 def notify_open_brief(result: Dict[str, Any], *, db: Optional[DatabaseManager] = None) -> bool:
-    """开盘简报：买卖了什么 + 当前盈亏。"""
+    """开盘简报：当前持仓 + 账户状态（不含成交明细，成交只在收盘汇总）。"""
     manager = db or DatabaseManager.get_instance()
     account_id = _paper_account_id(manager)
     if account_id is None:
         return False
 
-    filled = result.get("filled") or []
-    equity, today_pct = _current_equity_and_pct(manager, account_id)
+    equity, _ = _current_equity_and_pct(manager, account_id)
     holdings = _holdings_detail(manager, account_id, live=True)
+    try:
+        cash = _current_cash(
+            manager, account_id, date.fromisoformat(str(result.get("trade_date")))
+        )
+    except (TypeError, ValueError):
+        cash = 0.0
+    market_value = sum(
+        float(item.get("price") or 0.0) * float(item.get("quantity") or 0.0)
+        for item in holdings
+    )
+    initial = float(os.getenv("PAPER_INITIAL_CASH", "20000") or 20000)
+    total_pct = (equity - initial) / initial * 100 if initial > 0 else None
 
     lines = [f"【模拟盘·开盘】{_md_date(result.get('trade_date'))}", ""]
-    lines.append("【成交】")
-    lines.extend(_brief_trades(filled))
-    lines.append("")
-    if holdings:
-        lines.append("【持仓】")
-        for item in holdings:
-            pct = item.get("pnl_pct")
-            pct_text = f"{pct:+.2f}%" if pct is not None else "--"
-            lines.append(
-                f"{item.get('name') or ''} {item.get('code')}  "
-                f"{int(item.get('quantity') or 0)}股  "
-                f"{float(item.get('cost') or 0):.2f} → "
-                f"{float(item.get('price') or 0):.2f}  {pct_text}"
-            )
-    else:
-        lines.append("当前空仓")
+    lines.extend(_holdings_block(holdings))
     lines.append("")
     lines.append("【账户】")
     lines.append(
-        f"持仓 {len(holdings)} 只｜市值 {_yuan(sum(h.get('price', 0) * h.get('quantity', 0) for h in holdings))}"
-        f"｜现金 {_yuan(_current_cash(manager, account_id, date.fromisoformat(result['trade_date'])))}"
+        f"持仓 {len(holdings)} 只｜市值 {_yuan(market_value)}｜现金 {_yuan(cash)}"
     )
-    lines.append(f"总资产 {_yuan(equity)}｜今日 {_pct(today_pct)}")
+    lines.append(f"总资产 {_yuan(equity)}｜累计 {_pct(total_pct)}")
     return _send("\n".join(lines))
+
+
+def _holdings_block(holdings: Sequence[Dict[str, Any]]) -> List[str]:
+    """持仓段（开盘/收盘共用）：名称 代码 股数 成本 → 现价 浮盈%。"""
+    if not holdings:
+        return ["当前空仓"]
+    lines = ["【持仓】"]
+    for item in holdings:
+        pct = item.get("pnl_pct")
+        pct_text = f"{pct:+.2f}%" if pct is not None else "--"
+        lines.append(
+            f"{item.get('name') or ''} {item.get('code')}  "
+            f"{int(item.get('quantity') or 0)}股  "
+            f"{float(item.get('cost') or 0):.2f} → "
+            f"{float(item.get('price') or 0):.2f}  {pct_text}"
+        )
+    return lines
 
 
 def notify_close_brief(result: Dict[str, Any], *, db: Optional[DatabaseManager] = None) -> bool:
@@ -663,19 +675,7 @@ def notify_close_brief(result: Dict[str, Any], *, db: Optional[DatabaseManager] 
 
     holdings = result.get("holdings") or []
     lines.append("")
-    if holdings:
-        lines.append("【持仓】")
-        for item in holdings:
-            pct = item.get("pnl_pct")
-            pct_text = f"{pct:+.2f}%" if pct is not None else "--"
-            lines.append(
-                f"{item.get('name') or ''} {item.get('code')}  "
-                f"{int(item.get('quantity') or 0)}股  "
-                f"{float(item.get('cost') or 0):.2f} → "
-                f"{float(item.get('price') or 0):.2f}  {pct_text}"
-            )
-    else:
-        lines.append("当前空仓")
+    lines.extend(_holdings_block(holdings))
 
     lines.append("")
     lines.append("【账户】")
@@ -687,26 +687,6 @@ def notify_close_brief(result: Dict[str, Any], *, db: Optional[DatabaseManager] 
         f"今日 {_pct(result.get('today_pct'))}｜累计 {_pct(result.get('total_pct'))}"
     )
     return _send("\n".join(lines))
-
-
-def _brief_trades(filled: Sequence[Dict[str, Any]]) -> List[str]:
-    if not filled:
-        return ["买入 无", "卖出 无"]
-    lines: List[str] = []
-    for side, label in (("buy", "买入"), ("sell", "卖出")):
-        items = [item for item in filled if item.get("side") == side]
-        if not items:
-            lines.append(f"{label} 无")
-            continue
-        for item in items[:4]:
-            name = item.get("name") or ""
-            lines.append(
-                f"{label} {name} {item.get('code')}  "
-                f"{int(item.get('quantity') or 0)}股 @{item.get('price')}"
-            )
-            if item.get("reason"):
-                lines.append(f"  依据：{item.get('reason')}")
-    return lines
 
 
 def _send(content: str) -> bool:
