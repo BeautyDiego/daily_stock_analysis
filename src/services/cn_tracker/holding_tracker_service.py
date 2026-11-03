@@ -250,7 +250,12 @@ def sync_daily_history(
                 .limit(50)
                 .all()
             ]
-        targets = [code for code in dict.fromkeys(tracked + recent) if code]
+        # 市场环境基准（沪深 300ETF）也同步入库：跌破 MA20 时降低仓位上限
+        targets = [
+            code
+            for code in dict.fromkeys(tracked + recent + ["510300"])
+            if code
+        ]
 
     saved = 0
     errors = 0

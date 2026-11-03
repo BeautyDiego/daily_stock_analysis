@@ -164,7 +164,7 @@ class PaperTradingTestCase(unittest.TestCase):
 
         self.assertEqual(len(stats["buys"]), 1)
         # 成交价取开盘价（含 0.1% 滑点），不是收盘价 3.6
-        self.assertAlmostEqual(stats["buys"][0]["price"], 3.52, places=2)
+        self.assertAlmostEqual(stats["buys"][0]["price"], 3.53, places=2)
         self.assertLess(stats["buys"][0]["price"], 3.6)
 
     def test_ignores_same_day_picks(self):
@@ -243,7 +243,7 @@ class PaperTradingTestCase(unittest.TestCase):
 
         quantities = {item["code"]: item["quantity"] for item in stats["buys"]}
         self.assertEqual(quantities.get("600016"), 1100)
-        self.assertEqual(quantities.get("601668"), 800)
+        self.assertEqual(quantities.get("601668"), 700)  # 5.0 元含 0.25% 滑点后 5.01，只够 7 手
 
     # ------------------------------------------------------------------
     # 调仓：exit 清仓、reduce 减半、跌停卖不出

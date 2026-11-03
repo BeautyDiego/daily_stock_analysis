@@ -51,8 +51,29 @@ LOT_SIZE = 100
 COMMISSION_RATE = 0.00025
 COMMISSION_MIN = 5.0
 STAMP_TAX_RATE = 0.001
-# 滑点：模拟盘按收盘价成交，买上浮 / 卖下压 0.1%，避免系统性高估收益
+# 滑点：按开盘价成交，买上浮 / 卖下压，避免系统性高估收益。
+# 分档而非统一值：低价股盘口价差（0.01 元）占价格比例更高，
+# 用同一个 0.1% 会明显低估 5 元以下标的的真实成本。
 SLIPPAGE_RATE = 0.001
+SLIPPAGE_BY_PRICE = (
+    (5.0, 0.004),    # < 5 元
+    (15.0, 0.0025),  # 5–15 元
+)
+SLIPPAGE_DEFAULT = 0.0015  # > 15 元
+
+
+def slippage_rate(price: float) -> float:
+    """按价格返回答单滑点比例。"""
+    try:
+        value = float(price)
+    except (TypeError, ValueError):
+        return SLIPPAGE_RATE
+    if value <= 0:
+        return SLIPPAGE_RATE
+    for upper, rate in SLIPPAGE_BY_PRICE:
+        if value < upper:
+            return rate
+    return SLIPPAGE_DEFAULT
 
 # 初始资金视为「开户时已存入」的历史入金：这样回放任意 as_of 都能取到现金，
 # 不需要每次调用都对齐入金日期（现金不计息，不影响收益计算）。
@@ -334,6 +355,8 @@ def _execute_sells(
         return []
 
     positions = _load_positions(db, account_id)
+    # T+1：当日买入的标的当日不可卖，避免同日买卖同标的
+    bought_today = _today_bought_codes(db, account_id, trade_date)
     executed: List[Dict[str, Any]] = []
 
     for code, advice in reviews:
@@ -341,6 +364,9 @@ def _execute_sells(
         if advice not in ("exit", "reduce"):
             continue
         code = str(code)
+        if code in bought_today:
+            logger.info("模拟盘卖出跳过（T+1 当日买入）: code=%s advice=%s", code, advice)
+            continue
         position = positions.get(code)
         if not position:
             continue
@@ -707,8 +733,26 @@ def _tradable_price(
         if change > 0 and side == "buy":
             return None, "limit_up_sealed"
 
-    factor = 1 + SLIPPAGE_RATE if side == "buy" else 1 - SLIPPAGE_RATE
+    rate = slippage_rate(float(open_price))
+    factor = 1 + rate if side == "buy" else 1 - rate
     return round(float(open_price) * factor, 2), "ok"
+
+
+def _today_bought_codes(
+    db: DatabaseManager, account_id: int, trade_date: date
+) -> set:
+    """当日已买入的标的集合（T+1：当日买入不可卖）。"""
+    with db.get_session() as session:
+        rows = (
+            session.query(PortfolioTrade.symbol)
+            .filter(
+                PortfolioTrade.account_id == account_id,
+                PortfolioTrade.trade_date == trade_date,
+                PortfolioTrade.side == "buy",
+            )
+            .all()
+        )
+    return {str(row[0]) for row in rows if row[0]}
 
 
 def _previous_close(

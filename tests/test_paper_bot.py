@@ -4,7 +4,7 @@
 import os
 import tempfile
 import unittest
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import patch
 
 from src.config import Config
@@ -210,7 +210,7 @@ class PaperBotTestCase(unittest.TestCase):
 
         self.assertEqual(len(stats["filled"]), 1)
         self.assertEqual(stats["filled"][0]["side"], "buy")
-        self.assertAlmostEqual(stats["filled"][0]["price"], 3.52, places=2)
+        self.assertAlmostEqual(stats["filled"][0]["price"], 3.53, places=2)
 
     def test_execute_open_skips_high_gap(self):
         signal_date = date(2026, 11, 2)
@@ -241,7 +241,8 @@ class PaperBotTestCase(unittest.TestCase):
         return buy_date
 
     def test_watch_intraday_triggers_stop_loss(self):
-        trade_date = self._prepare_holding()
+        # T+1：建仓当日不可卖，风控检查放到次日
+        trade_date = self._prepare_holding() + timedelta(days=1)
         # 成本约 3.5，现价跌 9%
         payload = _tencent_payload("600016", price=3.18, prev_close=3.5, change_pct=-9.1)
         with patch("requests.get", return_value=_FakeResponse(payload)):
@@ -251,7 +252,8 @@ class PaperBotTestCase(unittest.TestCase):
         self.assertIn("止损", stats["triggered"][0]["reason"])
 
     def test_watch_intraday_triggers_hard_take_profit(self):
-        trade_date = self._prepare_holding()
+        # T+1：建仓当日不可卖，风控检查放到次日
+        trade_date = self._prepare_holding() + timedelta(days=1)
         payload = _tencent_payload("600016", price=4.3, prev_close=3.5, change_pct=22.0)
         with patch("requests.get", return_value=_FakeResponse(payload)):
             stats = watch_intraday(as_of=trade_date, db=self.db)
@@ -260,7 +262,8 @@ class PaperBotTestCase(unittest.TestCase):
         self.assertIn("止盈", stats["triggered"][0]["reason"])
 
     def test_watch_intraday_keeps_position_without_signal(self):
-        trade_date = self._prepare_holding()
+        # T+1：建仓当日不可卖，风控检查放到次日
+        trade_date = self._prepare_holding() + timedelta(days=1)
         payload = _tencent_payload("600016", price=3.6, prev_close=3.5, change_pct=2.8)
         with patch("requests.get", return_value=_FakeResponse(payload)):
             stats = watch_intraday(as_of=trade_date, db=self.db)
@@ -268,7 +271,8 @@ class PaperBotTestCase(unittest.TestCase):
         self.assertEqual(stats["triggered"], [])
 
     def test_watch_intraday_trailing_take_profit(self):
-        trade_date = self._prepare_holding()
+        # T+1：建仓当日不可卖，风控检查放到次日
+        trade_date = self._prepare_holding() + timedelta(days=1)
         # 先把峰值抬到 +16%（成本 3.5 → 4.06）
         peak_payload = _tencent_payload("600016", price=4.06, prev_close=3.5, change_pct=16.0)
         with patch("requests.get", return_value=_FakeResponse(peak_payload)):

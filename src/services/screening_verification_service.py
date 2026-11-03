@@ -212,6 +212,17 @@ class ScreeningVerificationService:
         # 快照不提供行业字段：先补齐，否则行业分散与政策匹配都会失效
         picks = list(fill_missing_industries(picks))
 
+        # 退市风险剔除：yaml 已覆盖 ST / 亏损 / 净资产为负，
+        # 这里补退市整理期（名称含「退」）与上游字段缺失时的兜底校验
+        try:
+            from src.services.cn_tracker.risk_filter import filter_delisting_risk
+
+            picks, risk_dropped = filter_delisting_risk(picks)
+            if risk_dropped:
+                market_stats["risk_excluded"] = risk_dropped
+        except Exception as exc:  # noqa: BLE001 - 过滤失败不阻断选股
+            logger.warning("退市风险剔除失败，按原候选继续: %s", exc)
+
         try:
             picks = apply_policy_bonus(picks, db=self._db, as_of=as_of)
         except Exception as exc:  # noqa: BLE001 - 政策加成失败不阻断选股

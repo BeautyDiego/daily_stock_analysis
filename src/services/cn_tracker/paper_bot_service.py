@@ -37,7 +37,14 @@ from src.services.cn_tracker.paper_trading_service import (
     _affordable_quantity,
     _load_positions,
     _position_slots,
+    _today_bought_codes,
     ensure_paper_account,
+    slippage_rate,
+)
+from src.services.cn_tracker.risk_control import (
+    adjusted_slots,
+    evaluate_account_risk,
+    evaluate_market_regime,
 )
 from src.services.portfolio_service import PortfolioService
 from src.storage import (
@@ -209,7 +216,17 @@ def plan_orders(
             {"code": code, "quantity": quantity, "advice": advice, "reason": reason}
         )
 
-    # 2) 买单：默认取严格早于当日的最近一个选股日；手动模式下允许当天
+    # 2) 买单：先过组合风控（只拦新开仓，卖出订单已在上面生成，不受影响）
+    account_risk = evaluate_account_risk(manager, account_id, trade_date)
+    market_regime = evaluate_market_regime(manager, trade_date)
+    result["risk"] = account_risk
+    result["regime"] = market_regime
+    if account_risk.get("paused"):
+        result["skipped"].append(f"risk_paused:{account_risk.get('reason')}")
+        logger.info("模拟盘暂停开新仓: %s", account_risk.get("reason"))
+        return result
+
+    # 3) 买单：默认取严格早于当日的最近一个选股日；手动模式下允许当天
     signal_date = _latest_pick_date(
         manager, trade_date, include_same_day=allow_same_day
     )
@@ -234,17 +251,22 @@ def plan_orders(
         result["skipped"].append("no_picks")
         return result
 
-    slots = _position_slots()
+    base_slots = _position_slots()
+    # 熊市折减的是「允许持有的仓位数量」，单仓预算仍按满仓数算，
+    # 这样少开仓就等于自动留出现金，而不是把资金堆到少数几只上
+    slots = adjusted_slots(base_slots, market_regime)
     remaining_slots = max(0, slots - len(positions))
     if remaining_slots <= 0:
-        result["skipped"].append("slots_full")
+        result["skipped"].append(
+            "slots_full" if not market_regime.get("risk_off") else "risk_off_no_slot"
+        )
         return result
 
     base_equity = _last_equity(manager, account_id, trade_date)
     if base_equity <= 0:
         # 首次运行还没有净值快照，用初始资金当预算基准
         base_equity = float(os.getenv("PAPER_INITIAL_CASH", "20000") or 20000)
-    budget = base_equity / slots
+    budget = base_equity / max(1, base_slots)
 
     for code, name, entry_price in picks:
         # 用已生成的买单数量判断，而不是先切片：切片会把「已持有」的候选
@@ -391,9 +413,8 @@ def execute_open(
                     continue
                 order["quantity"] = min(order["quantity"], available)
 
-            fill_price = round(
-                price * (1 + SLIPPAGE_RATE if side == "buy" else 1 - SLIPPAGE_RATE), 2
-            )
+            rate = slippage_rate(price)
+            fill_price = round(price * (1 + rate if side == "buy" else 1 - rate), 2)
             quantity = float(order["quantity"])
             amount = fill_price * quantity
             fee = max(COMMISSION_MIN, amount * COMMISSION_RATE)
@@ -470,7 +491,11 @@ def watch_intraday(
         return result
 
     quotes = fetch_realtime_prices(list(positions.keys()))
+    # T+1：当日买入的标的当日不可卖，盘中风控也不能破例
+    bought_today = _today_bought_codes(manager, account_id, trade_date)
     for code, position in positions.items():
+        if code in bought_today:
+            continue
         quote = quotes.get(code) or {}
         price = quote.get("price")
         if not price or float(price) <= 0:
@@ -502,7 +527,7 @@ def watch_intraday(
         quantity = int(float(position.get("quantity") or 0) // LOT_SIZE) * LOT_SIZE
         if quantity < LOT_SIZE:
             continue
-        fill_price = round(price * (1 - SLIPPAGE_RATE), 2)
+        fill_price = round(price * (1 - slippage_rate(price)), 2)
         amount = fill_price * quantity
         fee = max(COMMISSION_MIN, amount * COMMISSION_RATE)
         tax = amount * STAMP_TAX_RATE
