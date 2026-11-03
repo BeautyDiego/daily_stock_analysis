@@ -611,7 +611,6 @@ def notify_open_brief(result: Dict[str, Any], *, db: Optional[DatabaseManager] =
     if account_id is None:
         return False
 
-    equity, _ = _current_equity_and_pct(manager, account_id)
     holdings = _holdings_detail(manager, account_id, live=True)
     try:
         cash = _current_cash(
@@ -623,6 +622,9 @@ def notify_open_brief(result: Dict[str, Any], *, db: Optional[DatabaseManager] =
         float(item.get("price") or 0.0) * float(item.get("quantity") or 0.0)
         for item in holdings
     )
+    # 总资产必须与市值同源：快照里的权益是按收盘价估的，
+    # 直接拿来用会和实时市值对不上（实测差几十元）
+    equity = cash + market_value
     initial = float(os.getenv("PAPER_INITIAL_CASH", "20000") or 20000)
     total_pct = (equity - initial) / initial * 100 if initial > 0 else None
 
