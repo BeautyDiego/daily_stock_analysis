@@ -557,6 +557,31 @@ Tushare stock_basic.industry  ──┐
 > 清空模拟盘时必须连 `holding_reviews` 一起删：残留的复盘建议会把新持仓当成旧标的卖掉
 > （实测踩过：重建后 5 只持仓被旧 `exit` 建议卖掉 1 只）。
 
+### 12.8 看板
+
+`/paper` 页面（侧边栏「模拟盘」）：
+
+| 区块 | 内容 |
+| --- | --- |
+| 顶部卡片 | 总资产、累计收益、可用现金、持仓数 |
+| 净值走势 | 按交易日收盘估值绘制的 SVG 折线（不引入图表库） |
+| 当前持仓 | 代码、股数、成本、现价、浮盈% |
+| 近期成交 | 买卖方向、股数与成交价、原因（选股/复盘/止损） |
+| 风控参数 | 止损、止盈、移动止盈阈值 |
+
+接口：`GET /api/v1/paper/dashboard?curve_days=30&trade_limit=30`。
+
+**前端产物不在代码挂载范围内**：`src` / `api` / `main.py` 是挂载的，改完后端无需重建；
+但前端构建产物在 `/app/static`（镜像内），改前端后需要：
+
+```bash
+cd apps/dsa-web && npm run build            # 产物输出到项目根 static/
+scp -r static <host>:/opt/dsa-pickboard/
+docker exec dsa-pickboard rm -rf /app/static
+docker cp /opt/dsa-pickboard/static dsa-pickboard:/app/static
+docker restart dsa-pickboard
+```
+
 ## 12. 模拟盘（纸上交易）
 
 ### 12.1 定位
