@@ -600,11 +600,25 @@ def notify_open_brief(result: Dict[str, Any], *, db: Optional[DatabaseManager] =
 
     filled = result.get("filled") or []
     equity, today_pct = _current_equity_and_pct(manager, account_id)
-    holdings = _holdings_detail(manager, account_id)
+    holdings = _holdings_detail(manager, account_id, live=True)
 
     lines = [f"【模拟盘·开盘】{_md_date(result.get('trade_date'))}", ""]
     lines.append("【成交】")
     lines.extend(_brief_trades(filled))
+    lines.append("")
+    if holdings:
+        lines.append("【持仓】")
+        for item in holdings:
+            pct = item.get("pnl_pct")
+            pct_text = f"{pct:+.2f}%" if pct is not None else "--"
+            lines.append(
+                f"{item.get('name') or ''} {item.get('code')}  "
+                f"{int(item.get('quantity') or 0)}股  "
+                f"{float(item.get('cost') or 0):.2f} → "
+                f"{float(item.get('price') or 0):.2f}  {pct_text}"
+            )
+    else:
+        lines.append("当前空仓")
     lines.append("")
     lines.append("【账户】")
     lines.append(
@@ -704,9 +718,13 @@ def _yuan(value: Any) -> str:
 
 
 def _holdings_detail(
-    manager: DatabaseManager, account_id: int
+    manager: DatabaseManager, account_id: int, *, live: bool = False
 ) -> List[Dict[str, Any]]:
-    """持仓明细：成本、现价、浮盈百分比（供收盘简报）。"""
+    """持仓明细：成本、现价、浮盈百分比。
+
+    ``live=True`` 时用实时价刷新现价（开盘简报用），否则用日线收盘价
+    （收盘简报用，此时 ``--sync-daily`` 已把当日收盘写入）。
+    """
     positions = _load_positions(manager, account_id)
     names = _tracked_names(manager, list(positions.keys()))
     details: List[Dict[str, Any]] = []
@@ -724,6 +742,20 @@ def _holdings_detail(
                 "pnl_pct": round(pct, 2) if pct is not None else None,
             }
         )
+
+    if live and details:
+        quotes = fetch_realtime_prices([item["code"] for item in details])
+        for item in details:
+            quote = quotes.get(item["code"]) or {}
+            price = quote.get("price")
+            if not price or float(price) <= 0:
+                continue
+            item["price"] = float(price)
+            cost = float(item.get("cost") or 0.0)
+            item["pnl_pct"] = (
+                round((float(price) - cost) / cost * 100, 2) if cost > 0 else None
+            )
+
     details.sort(key=lambda item: item.get("pnl_pct") or 0.0, reverse=True)
     return details
 
