@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - [新功能] 新增 A 股模拟盘（`src/services/cn_tracker/paper_trading_service.py`）：默认初始资金 20000 元，按当日选股等权建仓、按复盘建议清仓/减半，按收盘价成交并计佣金与印花税，净值复用 `portfolio_daily_snapshots`。配套 `--paper-init` / `--paper-run` / `--paper-report`。
 
+- [新功能] 新增模拟盘自动交易 bot（`src/services/cn_tracker/paper_bot_service.py`）：盘前生成订单、开盘按实时价成交（高开超 3% 放弃）、盘中止损 -8% / 硬止盈 +20% / 移动止盈（+10% 后回落 5%）、收盘结算；新增 `paper_orders` 表与 `tracked_positions.peak_price`。推送收敛为开盘、收盘两条简报。配套 `--paper-plan` / `--paper-execute` / `--paper-watch` / `--paper-settle`。
+
 - [改进] A 股行业归属改用真实分类：`--sync-daily` 会生成 `data/screening/industry_map.csv`（Tushare `stock_basic` 优先、新浪行业板块兜底），选股管线经 `INDUSTRY_MAP_FILES` 填充快照 `industry`，名称关键词推断降为最后兜底。
 
 - [文档] 新增《国内 A 股股票分析与持仓跟踪系统设计说明》（`docs/cn-holding-tracker-design.md`）：明确纯 A 股边界、每日选股漏斗与因子权重、政策加成规则、跨日去重与行业分散、两层复盘评分卡与三档持有建议、四张数据表结构、模块输入输出与调度时序。
