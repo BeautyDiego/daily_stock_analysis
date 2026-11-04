@@ -252,7 +252,9 @@ def apply_policy_bonus(
             item.setdefault("policy_hits", [])
             continue
         delta = policy_delta(hits)
-        base = item.get("score", item.get("final_score"))
+        # dict.get 的默认值在键存在但值为 None/0 时不生效；
+        # 若 score 为空，应回退到 final_score 而不是丢弃基础分
+        base = item.get("score") or item.get("final_score")
         try:
             base_value = float(base) if base is not None else 0.0
         except (TypeError, ValueError):

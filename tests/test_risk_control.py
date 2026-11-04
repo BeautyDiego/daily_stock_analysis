@@ -164,6 +164,17 @@ class RiskControlTestCase(unittest.TestCase):
         self.assertEqual(adjusted_slots(5, {"risk_off": False}), 5)
         self.assertEqual(adjusted_slots(1, {"risk_off": True}), 1)
 
+    def test_daily_loss_ignores_same_day_presnapshot(self):
+        """plan_orders 盘前会写当日快照；若把它算进来，单日亏损恒为 0。"""
+        self._snapshot(date(2026, 10, 1), 20000.0)
+        self._snapshot(date(2026, 10, 2), 19000.0)  # 昨日 -5%
+        self._snapshot(date(2026, 10, 3), 19000.0)  # 今日盘前快照，权益相同
+
+        result = evaluate_account_risk(self.db, ACCOUNT_ID, date(2026, 10, 3))
+
+        self.assertTrue(result["paused"])
+        self.assertIn("单日亏损", result["reason"])
+
     # ------------------------------------------------------------------
     # ATR 自适应止损止盈
     # ------------------------------------------------------------------

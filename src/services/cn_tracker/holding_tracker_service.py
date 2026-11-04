@@ -80,7 +80,8 @@ def ensure_tracked_positions(
                 .first()
             )
             if existing is not None:
-                existing.source_date = pick_date
+                # source_date 是「首次入选日」，复盘用它算持有天数与时间止损。
+                # 每日同步持仓时不能刷新，否则 holding_days 恒为 0，时间止损永不触发。
                 existing.name = str(item.get("name") or existing.name or "")
                 existing.industry = str(item.get("industry") or existing.industry or "")
                 continue
@@ -481,8 +482,9 @@ def _score_review(
     actual_cost = (cost_map or {}).get(code)
     if actual_cost:
         entry = float(actual_cost)
-    source_date = position.get("source_date")
-    holding_days = _count_holding_days(source_date, review_date)
+    # 已持仓时按建仓日算，未持仓时退回首次入选日
+    held_since = position.get("entry_date") or position.get("source_date")
+    holding_days = _count_holding_days(held_since, review_date)
 
     reasons: List[str] = []
     review: Dict[str, Any] = {
@@ -579,16 +581,18 @@ def _score_review(
         db=db,
         as_of=review_date,
     )
-    negative_hits = [
+    negative_hits = [hit for hit in hits if hit.get("direction") == "negative"]
+    strong_negative_hits = [
         hit
-        for hit in hits
-        if hit.get("direction") == "negative"
-        and int(hit.get("strength") or 0) >= NEGATIVE_POLICY_MIN_STRENGTH
+        for hit in negative_hits
+        if int(hit.get("strength") or 0) >= NEGATIVE_POLICY_MIN_STRENGTH
     ]
+    positive_hits = [hit for hit in hits if hit.get("direction") == "positive"]
     if negative_hits:
+        # 任何负面事件都不能给满分；低强度负面此前落进 elif hits 反而被判「偏正面」
         policy_score = 0.0
         reasons.append(f"命中负面政策：{negative_hits[0].get('title', '')[:30]}")
-    elif hits:
+    elif positive_hits:
         policy_score = 15.0
         reasons.append("行业政策面偏正面")
     else:
@@ -616,7 +620,7 @@ def _score_review(
     if close < ma20 and volume_ratio is not None and volume_ratio >= BREAKOUT_VOLUME_MULTIPLE:
         hard_reasons.append("跌破 MA20 且放量 1.5 倍以上")
 
-    if negative_hits:
+    if strong_negative_hits:
         hard_reasons.append("命中高等级负面政策事件")
 
     if (

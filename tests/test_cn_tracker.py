@@ -4,6 +4,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 from datetime import date, timedelta
 
 import pandas as pd
@@ -310,6 +311,50 @@ class HoldingReviewTest(_DbTestCase):
         self.assertTrue(review["hard_exit"])
         self.assertEqual(review["advice"], "exit")
         self.assertLess(review["return_pct"], -8)
+
+    def test_ensure_tracked_keeps_first_source_date(self):
+        """每日同步持仓不能刷新首次入选日，否则持有天数永远归零。"""
+        first = date(2026, 10, 20)
+        ensure_tracked_positions(
+            [{"code": "600016", "name": "民生银行", "price": 3.5}],
+            pick_date=first,
+            db=self.db,
+        )
+        ensure_tracked_positions(
+            [{"code": "600016", "name": "民生银行", "price": 3.6}],
+            pick_date=date(2026, 11, 3),
+            db=self.db,
+        )
+        with self.db.get_session() as session:
+            position = session.query(TrackedPosition).one()
+        self.assertEqual(position.source_date, first)
+
+    def test_low_strength_negative_policy_not_scored_as_positive(self):
+        """低强度负面政策不能落进「行业政策面偏正面」给满分。"""
+        closes = [10.0] * 19 + [11.0]
+        history = _frame(closes)
+        benchmark = _frame([3000.0] * 20)
+        hits = [
+            {"direction": "negative", "strength": 2, "title": "行业小幅利空"}
+        ]
+
+        def score_with(policy_hits):
+            with patch(
+                "src.services.cn_tracker.holding_tracker_service.recent_policy_hits",
+                return_value=policy_hits,
+            ):
+                return _score_review(
+                    position=self._position(entry_price=10.0),
+                    history=history,
+                    benchmark=benchmark,
+                    review_date=date(2026, 11, 2),
+                    db=self.db,
+                )
+
+        self.assertLess(
+            score_with(hits)["scores"]["total"],
+            score_with([])["scores"]["total"],
+        )
 
     def test_score_review_prefers_actual_holding_cost(self):
         """已持仓时用实际成本算浮盈，避免复盘与模拟盘日报数字打架。"""

@@ -53,7 +53,9 @@ def evaluate_account_risk(
             )
             .filter(
                 PortfolioDailySnapshot.account_id == account_id,
-                PortfolioDailySnapshot.snapshot_date <= trade_date,
+                # 严格早于 trade_date：plan_orders 盘前会先写当日快照，
+                # 若把它算进来，单日亏损恒为 0，-3% 熔断永远不会触发
+                PortfolioDailySnapshot.snapshot_date < trade_date,
             )
             .order_by(PortfolioDailySnapshot.snapshot_date.desc())
             .limit(RISK_LOOKBACK_SNAPSHOTS)

@@ -287,6 +287,26 @@ class PaperBotTestCase(unittest.TestCase):
         self.assertEqual(len(stats["triggered"]), 1)
         self.assertIn("移动止盈", stats["triggered"][0]["reason"])
 
+    def test_execute_open_respects_t_plus_1(self):
+        """当日买入的标的，当日复盘给出 exit 也不能在开盘执行卖出。"""
+        trade_date = date(2026, 11, 3)
+        self._add_pick("600016", "民生银行", 3.5, trade_date, rank=1)
+        self._add_daily("600016", trade_date, close=3.5)
+        ensure_paper_account(initial_cash=20000, db=self.db)
+        run_daily_paper(as_of=trade_date, db=self.db)
+        self._add_review("600016", trade_date, "exit")
+
+        plan_orders(as_of=trade_date, db=self.db)
+        payload = _tencent_payload(
+            "600016", price=3.6, prev_close=3.5, change_pct=2.8
+        )
+        with patch("requests.get", return_value=_FakeResponse(payload)):
+            stats = execute_open(as_of=trade_date, db=self.db, notify=False)
+
+        self.assertEqual(
+            [item for item in stats["filled"] if item["side"] == "sell"], []
+        )
+
     def test_trailing_take_profit_disabled_by_default(self):
         """移动止盈默认关闭：同样的「先涨后回落」路径不应触发卖出。"""
         with patch.dict(os.environ, {}, clear=False):

@@ -226,6 +226,14 @@ class ScreeningVerificationService:
 
         try:
             picks = apply_policy_bonus(picks, db=self._db, as_of=as_of)
+            # 加成改变了分数，必须立刻重排：去重豁免名额与行业名额都是
+            # 「按候选顺序先到先得」，否则政策加分只影响落库后的展示，
+            # 完全不改变哪 5 只入选
+            picks.sort(
+                key=lambda item: -_as_float(
+                    item.get("score") or item.get("final_score") or 0
+                )
+            )
         except Exception as exc:  # noqa: BLE001 - 政策加成失败不阻断选股
             logger.warning("政策加成失败，按原始分数继续: %s", exc)
 

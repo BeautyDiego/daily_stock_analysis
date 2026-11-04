@@ -381,6 +381,7 @@ def execute_open(
         account_id=account_id, as_of=trade_date, include_realtime=False
     )
     cash_available = _current_cash(manager, account_id, trade_date)
+    bought_today = _today_bought_codes(manager, account_id, trade_date)
 
     # 先卖后买：卖出释放的现金可以用于买入
     for side in ("sell", "buy"):
@@ -408,8 +409,11 @@ def execute_open(
                 continue
 
             if side == "buy":
+                # 现金校验必须用「含滑点的成交价」：record_trade 按 fill_price 扣款，
+                # 若按原始报价校验，低价股会因滑点造成负现金
+                buy_fill_price = round(price * (1 + slippage_rate(price)), 2)
                 quantity = _affordable_quantity(
-                    float(price) * order["quantity"], price, cash_available
+                    buy_fill_price * order["quantity"], buy_fill_price, cash_available
                 )
                 if quantity < LOT_SIZE:
                     _mark_order(manager, order["id"], "cancelled", note="现金不足")
@@ -417,6 +421,14 @@ def execute_open(
                     continue
                 order["quantity"] = quantity
             else:
+                if order["code"] in bought_today:
+                    _mark_order(
+                        manager, order["id"], "cancelled", note="T+1 当日买入不可卖"
+                    )
+                    result["cancelled"].append(
+                        {**order, "why": "T+1 当日买入不可卖"}
+                    )
+                    continue
                 position = _load_positions(manager, account_id).get(order["code"]) or {}
                 # 记录卖出前的成本，供简报展示盈亏
                 position_cost = float(position.get("avg_cost") or 0.0)
@@ -452,6 +464,9 @@ def execute_open(
                 _mark_order(manager, order["id"], "filled", filled_price=fill_price)
                 if side == "buy":
                     cash_available -= amount + fee
+                else:
+                    # 卖出回款必须计入可用现金，否则「先卖后买」只是注释
+                    cash_available += amount - round(fee, 2) - round(tax, 2)
                 result["filled"].append(
                     {
                         "code": order["code"],
