@@ -270,6 +270,7 @@ class PaperBotTestCase(unittest.TestCase):
 
         self.assertEqual(stats["triggered"], [])
 
+    @patch.dict(os.environ, {"PAPER_TRAILING_ENABLED": "true"})
     def test_watch_intraday_trailing_take_profit(self):
         # T+1：建仓当日不可卖，风控检查放到次日
         trade_date = self._prepare_holding() + timedelta(days=1)
@@ -285,6 +286,26 @@ class PaperBotTestCase(unittest.TestCase):
 
         self.assertEqual(len(stats["triggered"]), 1)
         self.assertIn("移动止盈", stats["triggered"][0]["reason"])
+
+    def test_trailing_take_profit_disabled_by_default(self):
+        """移动止盈默认关闭：同样的「先涨后回落」路径不应触发卖出。"""
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("PAPER_TRAILING_ENABLED", None)
+            trade_date = self._prepare_holding() + timedelta(days=1)
+
+            peak_payload = _tencent_payload(
+                "600016", price=4.06, prev_close=3.5, change_pct=16.0
+            )
+            with patch("requests.get", return_value=_FakeResponse(peak_payload)):
+                watch_intraday(as_of=trade_date, db=self.db)
+
+            drop_payload = _tencent_payload(
+                "600016", price=3.85, prev_close=3.5, change_pct=10.0
+            )
+            with patch("requests.get", return_value=_FakeResponse(drop_payload)):
+                stats = watch_intraday(as_of=trade_date, db=self.db)
+
+        self.assertEqual(stats["triggered"], [])
 
     # ------------------------------------------------------------------
     # 手动立即建仓

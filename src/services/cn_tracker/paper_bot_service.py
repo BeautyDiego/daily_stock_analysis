@@ -531,7 +531,8 @@ def watch_intraday(
         elif return_pct >= take_pct:
             reason = f"止盈 {return_pct:+.1f}%（阈值 {take_pct:.1f}%）"
         elif (
-            peak_pct >= TRAILING_ACTIVATE_PCT
+            _trailing_enabled()
+            and peak_pct >= TRAILING_ACTIVATE_PCT
             and drawdown >= TRAILING_DRAWDOWN_PCT
         ):
             reason = f"移动止盈（峰值 {peak_pct:+.1f}% 回落 {drawdown:.1f}%）"
@@ -877,6 +878,21 @@ def _paper_account_id(manager: DatabaseManager) -> Optional[int]:
             .first()
         )
     return int(account.id) if account else None
+
+
+def _trailing_enabled() -> bool:
+    """移动止盈开关，默认关闭。
+
+    88,317 个买入点的配对回测：移动止盈比「一次性硬止盈」平均差 0.26pct。
+    原因是它的启动条件是「先涨到 +10%」，只对涨过的标的生效——
+    在能涨的标的上提前卖飞，在对下跌的标的上完全不提供保护。
+    保留实现以便日后在上行区间重新评估（``PAPER_TRAILING_ENABLED=true``）。
+    """
+    return str(os.getenv("PAPER_TRAILING_ENABLED", "false")).strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
 
 def _buy_reason(signal_date: date, industry: Any, policy_hits: Any) -> str:
