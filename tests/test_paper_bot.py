@@ -370,6 +370,28 @@ class PaperBotTestCase(unittest.TestCase):
         self.assertIn("买入 江苏银行 600919  300股 @12.54  共 3762 元", lines[0])
         self.assertIn("依据", lines[1])
 
+    def test_trade_lines_show_pnl_for_sell(self):
+        """卖出要显示盈亏，不能只给成交价。"""
+        lines = paper_bot_service._trade_lines(
+            [
+                {
+                    "code": "600016",
+                    "name": "民生银行",
+                    "side": "sell",
+                    "quantity": 1100,
+                    "price": 3.48,
+                    "cost": 3.55,
+                    "reason": "复盘离场",
+                }
+            ]
+        )
+        # 先列买入（本次无），再列卖出
+        self.assertEqual(lines[0], "买入 无")
+        self.assertIn("卖出 民生银行 600016", lines[1])
+        self.assertIn("盈亏", lines[2])
+        self.assertIn("-77", lines[2])  # (3.48-3.55)*1100
+        self.assertIn("复盘离场", lines[3])
+
     def test_trade_lines_handle_empty_fill(self):
         self.assertEqual(paper_bot_service._trade_lines([]), ["买入 无｜卖出 无"])
 

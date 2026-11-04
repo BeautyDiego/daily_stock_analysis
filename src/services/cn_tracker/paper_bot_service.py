@@ -385,6 +385,7 @@ def execute_open(
     # 先卖后买：卖出释放的现金可以用于买入
     for side in ("sell", "buy"):
         for order in [item for item in orders if item["side"] == side]:
+            position_cost = 0.0
             quote = quotes.get(order["code"]) or {}
             price = quote.get("price")
             if not price or float(price) <= 0:
@@ -417,6 +418,8 @@ def execute_open(
                 order["quantity"] = quantity
             else:
                 position = _load_positions(manager, account_id).get(order["code"]) or {}
+                # 记录卖出前的成本，供简报展示盈亏
+                position_cost = float(position.get("avg_cost") or 0.0)
                 available = int(float(position.get("quantity") or 0) // LOT_SIZE) * LOT_SIZE
                 if available < LOT_SIZE:
                     _mark_order(manager, order["id"], "cancelled", note="无可卖持仓")
@@ -456,6 +459,7 @@ def execute_open(
                         "side": side,
                         "quantity": quantity,
                         "price": fill_price,
+                        "cost": position_cost or None,
                         "reason": order.get("reason"),
                     }
                 )
@@ -682,6 +686,14 @@ def notify_open_brief(result: Dict[str, Any], *, db: Optional[DatabaseManager] =
         f"持仓 {len(holdings)} 只｜市值 {_yuan(market_value)}｜现金 {_yuan(cash)}"
     )
     lines.append(f"总资产 {_yuan(equity)}｜累计 {_pct(total_pct)}")
+
+    # 说明卖出资金的去向：当日可用于建仓，不然留到下一交易日
+    if any(item.get("side") == "sell" for item in filled):
+        lines.append("")
+        lines.append(
+            "> 卖出资金当日即可用于建仓；本次无买入信号时，"
+            "留至下一交易日 09:25 下单、09:45 按实时价成交。"
+        )
     return _send("\n".join(lines))
 
 
@@ -952,6 +964,14 @@ def _trade_lines(filled: Sequence[Dict[str, Any]]) -> List[str]:
                 f"{label} {item.get('name') or ''} {item.get('code')}  "
                 f"{int(quantity)}股 @{price:.2f}  共 {price * quantity:.0f} 元"
             )
+            cost = float(item.get("cost") or 0.0)
+            if side == "sell" and cost > 0:
+                pnl = (price - cost) * quantity
+                pnl_pct = (price - cost) / cost * 100
+                lines.append(
+                    f"  盈亏：成本 {cost:.2f} → 卖出 {price:.2f}，"
+                    f"{pnl:+.0f} 元（{pnl_pct:+.1f}%）"
+                )
             if item.get("reason"):
                 lines.append(f"  依据：{item.get('reason')}")
     return lines

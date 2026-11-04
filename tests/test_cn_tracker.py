@@ -366,6 +366,35 @@ class HoldingReviewTest(_DbTestCase):
             position = session.query(TrackedPosition).one()
         self.assertEqual(position.exit_date, exit_day)
 
+    def test_review_report_only_held(self):
+        """只推实际持仓：未持仓的关注标的不进推送正文。"""
+        reviews = [
+            {
+                "code": "600016",
+                "name": "民生银行",
+                "advice": "hold",
+                "held": True,
+                "scores": {"total": 80},
+                "reasons": [],
+            },
+            {
+                "code": "600919",
+                "name": "江苏银行",
+                "advice": "exit",
+                "held": False,
+                "scores": {"total": 30},
+                "reasons": [],
+            },
+        ]
+
+        text = build_review_report(
+            reviews, review_date=date(2026, 11, 4), only_held=True
+        )
+
+        self.assertIn("民生银行", text)
+        self.assertNotIn("江苏银行", text)
+        self.assertIn("1 只关注标的", text)
+
     def test_review_report_renders_advice(self):
         content = build_review_report(
             [

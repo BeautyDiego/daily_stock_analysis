@@ -311,8 +311,22 @@ def sync_daily_history(
     }
 
 
-def build_review_report(reviews: Sequence[Dict[str, Any]], *, review_date: date) -> str:
-    """把复盘结果渲染为 Markdown 推送正文。"""
+def build_review_report(
+    reviews: Sequence[Dict[str, Any]],
+    *,
+    review_date: date,
+    only_held: bool = False,
+) -> str:
+    """把复盘结果渲染为 Markdown 推送正文。
+
+    ``only_held=True`` 时只列**实际持仓**（有模拟盘成本的），关注标的静默落库。
+    否则推送里会混入用户没买的票，与实际持仓对不上（实测：复盘 8 只，实际只持 4 只）。
+    """
+    if not reviews:
+        return ""
+    total = len(reviews)
+    if only_held:
+        reviews = [item for item in reviews if item.get("held")]
     if not reviews:
         return ""
     title_map = {"hold": "继续持有", "reduce": "减仓观察", "exit": "建议离场"}
@@ -331,14 +345,26 @@ def build_review_report(reviews: Sequence[Dict[str, Any]], *, review_date: date)
         reasons = item.get("reasons") or []
         if reasons:
             lines.append(f"  理由：{'；'.join(str(r) for r in reasons[:3])}")
+    if only_held and total > len(reviews):
+        lines.append("")
+        lines.append(
+            f"> 另有 {total - len(reviews)} 只关注标的已复盘（未持仓，详见看板）。"
+        )
     lines.append("")
     lines.append("> 建议仅作研究参考，据此操作风险自负。")
     return "\n".join(lines)
 
 
-def notify_holdings_review(reviews: Sequence[Dict[str, Any]], *, review_date: date) -> bool:
-    """推送复盘结果；无内容或未配置渠道时返回 False。"""
-    content = build_review_report(reviews, review_date=review_date)
+def notify_holdings_review(
+    reviews: Sequence[Dict[str, Any]],
+    *,
+    review_date: date,
+    only_held: bool = True,
+) -> bool:
+    """推送复盘结果；默认只推实际持仓。"""
+    content = build_review_report(
+        reviews, review_date=review_date, only_held=only_held
+    )
     if not content:
         logger.info("持仓复盘：无内容，跳过推送")
         return False
@@ -629,9 +655,11 @@ def _score_review(
                 "total": float(total),
             },
             "advice": advice,
-            "hard_exit": hard_exit,
-        }
-    )
+                "hard_exit": hard_exit,
+                # 是否实际持仓（有模拟盘成本）：推送只展示持仓，关注标的静默落库
+                "held": bool(actual_cost),
+            }
+        )
     return review
 
 
