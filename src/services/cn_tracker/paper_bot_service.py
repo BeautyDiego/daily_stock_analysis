@@ -260,7 +260,13 @@ def plan_orders(
         result["skipped"].append("no_picks")
         return result
 
-    base_slots = _position_slots()
+    base_equity = _last_equity(manager, account_id, trade_date)
+    if base_equity <= 0:
+        # 首次运行还没有净值快照，用初始资金当预算基准
+        base_equity = float(os.getenv("PAPER_INITIAL_CASH", "20000") or 20000)
+
+    # 仓位数量按账户规模算（目标单仓 4000 元），再按市场环境折减
+    base_slots = _position_slots(base_equity)
     # 熊市折减的是「允许持有的仓位数量」，单仓预算仍按满仓数算，
     # 这样少开仓就等于自动留出现金，而不是把资金堆到少数几只上
     slots = adjusted_slots(base_slots, market_regime)
@@ -271,10 +277,6 @@ def plan_orders(
         )
         return result
 
-    base_equity = _last_equity(manager, account_id, trade_date)
-    if base_equity <= 0:
-        # 首次运行还没有净值快照，用初始资金当预算基准
-        base_equity = float(os.getenv("PAPER_INITIAL_CASH", "20000") or 20000)
     budget = base_equity / max(1, base_slots)
 
     for code, name, entry_price, industry, policy_hits in picks:

@@ -118,18 +118,19 @@ class PaperTradingTestCase(unittest.TestCase):
     def test_affordable_quantity_respects_cash(self):
         self.assertEqual(_affordable_quantity(4000, 3.5, 1000), 200)
 
-    def test_position_slots_follow_screening_top_n(self):
-        with patch.dict(os.environ, {"SCREENING_PICKS_TOP_N": "3"}):
-            self.assertEqual(_position_slots(), 3)
-        with patch.dict(os.environ, {"SCREENING_PICKS_TOP_N": "10"}):
-            self.assertEqual(_position_slots(), 10)
+    def test_position_slots_scale_with_equity(self):
+        """仓位数量按账户规模计算，目标单仓 4000 元。"""
+        self.assertEqual(_position_slots(20000), 5)
+        self.assertEqual(_position_slots(8000), 2)
+        self.assertEqual(_position_slots(40000), 10)  # 封顶
+        self.assertEqual(_position_slots(500), 1)  # 下限
 
-    def test_position_slots_fall_back_on_invalid_value(self):
-        with patch.dict(os.environ, {"SCREENING_PICKS_TOP_N": "abc"}):
-            self.assertEqual(_position_slots(), DEFAULT_POSITION_SLOTS)
-        with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("SCREENING_PICKS_TOP_N", None)
-            self.assertEqual(_position_slots(), DEFAULT_POSITION_SLOTS)
+    def test_position_slots_without_equity_uses_default(self):
+        self.assertEqual(_position_slots(), DEFAULT_POSITION_SLOTS)
+
+    def test_position_slots_respects_target_override(self):
+        with patch.dict(os.environ, {"PAPER_TARGET_SLOT_VALUE": "2000"}):
+            self.assertEqual(_position_slots(20000), 10)
 
     # ------------------------------------------------------------------
     # 账户

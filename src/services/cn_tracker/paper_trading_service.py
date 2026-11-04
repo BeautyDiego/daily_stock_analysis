@@ -43,9 +43,13 @@ logger = logging.getLogger(__name__)
 
 PAPER_ACCOUNT_NAME = "A股模拟盘"
 DEFAULT_INITIAL_CASH = 20000.0
-# 仓位数量跟随 SCREENING_PICKS_TOP_N；这里的默认值仅在配置缺失时使用
+# 仓位数量按账户规模动态计算：目标单仓 4000 元。
+# 资金少时自动减仓，避免单仓被压到买不起一手（1 手最低 1000 元）；
+# 资金多时封顶 10 仓，避免持仓过多难以跟踪。
+TARGET_SLOT_VALUE = 4000.0
+MIN_POSITION_SLOTS = 1
+MAX_POSITION_SLOTS = 10
 DEFAULT_POSITION_SLOTS = 5
-MAX_POSITION_SLOTS = 20
 LOT_SIZE = 100
 
 COMMISSION_RATE = 0.00025
@@ -490,8 +494,8 @@ def _execute_buys(
     positions = _load_positions(db, account_id)
 
     # 每个仓位等额预算；已有持仓不重复买入
-    slots = _position_slots()
-    budget = equity / slots
+    slots = _position_slots(equity)
+    budget = equity / max(1, slots)
     logger.info(
         "模拟盘建仓预算: 仓位=%s 单仓=%.2f 可用现金=%.2f", slots, budget, cash
     )
@@ -601,24 +605,28 @@ def _sync_tracked_holdings(
         logger.warning("同步模拟盘持仓到跟踪表失败: %s", exc)
 
 
-def _position_slots() -> int:
-    """单日建仓的仓位数量，跟随 ``SCREENING_PICKS_TOP_N``。
+def _position_slots(equity: Optional[float] = None) -> int:
+    """仓位数量：按账户规模动态计算，目标单仓 4000 元。
 
-    之前硬编码 5：一旦把选股只数改大，模拟盘仍然只买 5 只，配置等于失效。
+    之前是固定值（先硬编码 5，后跟随选股只数），两者都不考虑资金量：
+    资金 1 万时 5 仓意味着单仓 2000 元，1 手就占掉一半预算；
+    资金 10 万时 5 仓又过于集中。
+
+    与选股只数的关系：选股决定「推荐几只」，仓位决定「实际买几只」，
+    两者解耦——推荐 5 只而资金不够时，只买 2~3 只是正常的。
     """
-    raw = os.getenv("SCREENING_PICKS_TOP_N")
-    if raw is None or not str(raw).strip():
-        return DEFAULT_POSITION_SLOTS
-    try:
-        value = int(str(raw).strip())
-    except (TypeError, ValueError):
-        logger.warning(
-            "SCREENING_PICKS_TOP_N 不是整数（%r），模拟盘按默认 %s 个仓位执行",
-            raw,
-            DEFAULT_POSITION_SLOTS,
-        )
-        return DEFAULT_POSITION_SLOTS
-    return max(1, min(MAX_POSITION_SLOTS, value))
+    target = TARGET_SLOT_VALUE
+    raw = os.getenv("PAPER_TARGET_SLOT_VALUE")
+    if raw and str(raw).strip():
+        try:
+            target = float(str(raw).strip())
+        except (TypeError, ValueError):
+            logger.warning("PAPER_TARGET_SLOT_VALUE 不是数字（%r），按默认计算", raw)
+
+    if equity and equity > 0 and target > 0:
+        slots = int(round(float(equity) / target))
+        return max(MIN_POSITION_SLOTS, min(MAX_POSITION_SLOTS, slots))
+    return DEFAULT_POSITION_SLOTS
 
 
 def _affordable_quantity(budget: float, price: float, cash: float) -> int:
