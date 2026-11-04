@@ -112,8 +112,14 @@ def _simulate(
     target_pct: float,
     mode: str,
     max_hold_days: int,
+    trailing_activate_pct: float = TRAILING_ACTIVATE_PCT,
+    trailing_drawdown_pct: float = TRAILING_DRAWDOWN_PCT,
 ) -> Optional[Dict[str, Any]]:
-    """模拟一笔交易，返回收益率（%）与是否触发止盈。"""
+    """模拟一笔交易，返回收益率（%）与是否触发止盈。
+
+    ``trailing_activate_pct`` / ``trailing_drawdown_pct`` 只在 ``mode="trail"``
+    时生效：浮盈达到激活线后，从峰值回落该幅度即卖出。
+    """
     if entry <= 0 or not bars:
         return None
 
@@ -157,8 +163,8 @@ def _simulate(
                 sold_second = True
                 triggered = True
         elif mode == "trail":
-            if peak >= entry * (1 + TRAILING_ACTIVATE_PCT / 100):
-                stop_line = peak * (1 - TRAILING_DRAWDOWN_PCT / 100)
+            if peak >= entry * (1 + trailing_activate_pct / 100):
+                stop_line = peak * (1 - trailing_drawdown_pct / 100)
                 # 盘中检查：当日最低价触及回落线即视为卖出
                 if low > 0 and low <= stop_line:
                     realized += remaining * (stop_line / entry - 1)
@@ -181,6 +187,8 @@ def compare_take_profit(
     pool_size: int = 0,
     sample_step_days: int = SAMPLE_STEP_DAYS,
     target_multiplier: Optional[float] = None,
+    trailing_activate_pct: float = TRAILING_ACTIVATE_PCT,
+    trailing_drawdown_pct: float = TRAILING_DRAWDOWN_PCT,
     db: Optional[DatabaseManager] = None,
 ) -> Dict[str, Any]:
     """在同一个买入点集合上比较三种止盈规则。
@@ -252,6 +260,8 @@ def compare_take_profit(
                     target_pct=target_pct,
                     mode=mode,
                     max_hold_days=max_hold_days,
+                    trailing_activate_pct=trailing_activate_pct,
+                    trailing_drawdown_pct=trailing_drawdown_pct,
                 )
                 if result is None:
                     continue
