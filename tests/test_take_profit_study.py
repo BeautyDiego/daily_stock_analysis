@@ -86,6 +86,37 @@ class SimulateTestCase(unittest.TestCase):
         self.assertFalse(result["triggered"])
         self.assertAlmostEqual(result["return_pct"], 1.0, places=2)
 
+    # --- 止损 ---
+
+    def test_stop_loss_cuts_before_target(self):
+        # 第二根 bar 最低 9.1，跌破 -8% 的 9.2 → 按止损价成交
+        bars = [_bar(10.2, 9.9, 10.1), _bar(9.5, 9.1, 9.3)]
+        result = _simulate(
+            bars,
+            self.ENTRY,
+            target_pct=20.0,
+            mode="single",
+            max_hold_days=10,
+            stop_pct=-8.0,
+        )
+        self.assertTrue(result["stopped"])
+        self.assertFalse(result["triggered"])
+        self.assertAlmostEqual(result["return_pct"], -8.0, places=2)
+
+    def test_stop_wins_when_both_touched_same_day(self):
+        """同日既触及止损又触及止盈时，按止损处理（保守）。"""
+        bars = [_bar(12.5, 9.0, 11.0)]
+        result = _simulate(
+            bars,
+            self.ENTRY,
+            target_pct=20.0,
+            mode="single",
+            max_hold_days=10,
+            stop_pct=-8.0,
+        )
+        self.assertTrue(result["stopped"])
+        self.assertAlmostEqual(result["return_pct"], -8.0, places=2)
+
     def test_returns_none_without_bars(self):
         self.assertIsNone(
             _simulate([], self.ENTRY, target_pct=20, mode="single", max_hold_days=10)

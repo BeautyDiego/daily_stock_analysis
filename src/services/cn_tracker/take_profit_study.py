@@ -28,6 +28,8 @@ from src.services.cn_tracker.risk_control import (
     TAKE_PCT_CEIL,
     TAKE_PCT_FLOOR,
     atr_percent_from_bars,
+    stop_loss_pct,
+    stop_loss_pct_scaled,
     take_profit_pct,
 )
 from src.storage import DatabaseManager, StockDaily
@@ -114,11 +116,12 @@ def _simulate(
     max_hold_days: int,
     trailing_activate_pct: float = TRAILING_ACTIVATE_PCT,
     trailing_drawdown_pct: float = TRAILING_DRAWDOWN_PCT,
+    stop_pct: Optional[float] = None,
 ) -> Optional[Dict[str, Any]]:
-    """模拟一笔交易，返回收益率（%）与是否触发止盈。
+    """模拟一笔交易，返回收益率（%）、是否触发止盈/止损。
 
-    ``trailing_activate_pct`` / ``trailing_drawdown_pct`` 只在 ``mode="trail"``
-    时生效：浮盈达到激活线后，从峰值回落该幅度即卖出。
+    ``stop_pct`` 为负值（如 -8.0）。同日既触及止损又触及止盈时按**止损**处理
+    （保守假设：无法确定盘中先后顺序）。
     """
     if entry <= 0 or not bars:
         return None
@@ -134,6 +137,8 @@ def _simulate(
     peak = entry
     sold_first = False
     sold_second = False
+    stop_line = entry * (1 + stop_pct / 100) if stop_pct else None
+    stopped = False
 
     end_index = min(len(bars), max_hold_days)
     for index in range(end_index):
@@ -144,6 +149,13 @@ def _simulate(
         if high <= 0 or close <= 0:
             continue
         peak = max(peak, high)
+
+        # 止损优先：同日既触及止损又触及止盈时，按亏损处理（保守）
+        if stop_line is not None and low > 0 and low <= stop_line:
+            realized += remaining * (stop_pct / 100)
+            remaining = 0.0
+            stopped = True
+            break
 
         if mode == "single":
             if high >= single_target:
@@ -164,10 +176,11 @@ def _simulate(
                 triggered = True
         elif mode == "trail":
             if peak >= entry * (1 + trailing_activate_pct / 100):
-                stop_line = peak * (1 - trailing_drawdown_pct / 100)
+                # 变量名不能叫 stop_line：那是止损线，会覆盖上面的判定
+                trail_line = peak * (1 - trailing_drawdown_pct / 100)
                 # 盘中检查：当日最低价触及回落线即视为卖出
-                if low > 0 and low <= stop_line:
-                    realized += remaining * (stop_line / entry - 1)
+                if low > 0 and low <= trail_line:
+                    realized += remaining * (trail_line / entry - 1)
                     remaining = 0.0
                     triggered = True
                     break
@@ -177,7 +190,11 @@ def _simulate(
         if last_close > 0:
             realized += remaining * (last_close / entry - 1)
 
-    return {"return_pct": realized * 100, "triggered": triggered}
+    return {
+        "return_pct": realized * 100,
+        "triggered": triggered,
+        "stopped": stopped,
+    }
 
 
 def compare_take_profit(
@@ -187,6 +204,7 @@ def compare_take_profit(
     pool_size: int = 0,
     sample_step_days: int = SAMPLE_STEP_DAYS,
     target_multiplier: Optional[float] = None,
+    stop_multiplier: Optional[float] = None,
     trailing_activate_pct: float = TRAILING_ACTIVATE_PCT,
     trailing_drawdown_pct: float = TRAILING_DRAWDOWN_PCT,
     db: Optional[DatabaseManager] = None,
@@ -207,6 +225,7 @@ def compare_take_profit(
 
     samples: Dict[str, List[float]] = {mode: [] for mode in MODES}
     triggered: Dict[str, int] = {mode: 0 for mode in MODES}
+    stopped: Dict[str, int] = {mode: 0 for mode in MODES}
     win: Dict[str, int] = {mode: 0 for mode in MODES}
     buy_points = 0
 
@@ -241,6 +260,11 @@ def compare_take_profit(
             else:
                 target_pct = take_profit_pct(atr_pct)
 
+            if stop_multiplier is not None:
+                stop_pct = stop_loss_pct_scaled(atr_pct, stop_multiplier)
+            else:
+                stop_pct = stop_loss_pct(atr_pct)
+
             bars = [
                 {
                     "high": float(highs[i]),
@@ -262,12 +286,15 @@ def compare_take_profit(
                     max_hold_days=max_hold_days,
                     trailing_activate_pct=trailing_activate_pct,
                     trailing_drawdown_pct=trailing_drawdown_pct,
+                    stop_pct=stop_pct,
                 )
                 if result is None:
                     continue
                 samples[mode].append(result["return_pct"])
                 if result["triggered"]:
                     triggered[mode] += 1
+                if result.get("stopped"):
+                    stopped[mode] += 1
                 if result["return_pct"] > 0:
                     win[mode] += 1
 
@@ -284,6 +311,7 @@ def compare_take_profit(
             "median": round(float(series.median()), 3),
             "win_rate": round(win[mode] / len(values) * 100, 1),
             "trigger_rate": round(triggered[mode] / len(values) * 100, 1),
+            "stop_rate": round(stopped[mode] / len(values) * 100, 1),
             "p90_loss": round(float(series.quantile(0.1)), 3),
         }
 
@@ -308,7 +336,8 @@ def build_study_report(stats: Dict[str, Any]) -> str:
         f"买入点 {stats.get('buy_points')} 个｜回看 {stats.get('lookback_days')} 天"
         f"｜最长持有 {stats.get('max_hold_days')} 日",
         "",
-        f"{'方式':<34}{'样本':>8}{'平均':>9}{'中位':>9}{'胜率':>8}{'触发':>8}{'P10':>9}",
+        f"{'方式':<34}{'样本':>8}{'平均':>9}{'中位':>9}{'胜率':>8}"
+        f"{'止损':>7}{'止盈':>7}{'P10':>9}",
     ]
     for mode in MODES:
         item = results.get(mode)
@@ -321,7 +350,8 @@ def build_study_report(stats: Dict[str, Any]) -> str:
             f"{item['mean']:>+8.3f}%"
             f"{item['median']:>+8.3f}%"
             f"{item['win_rate']:>7.1f}%"
-            f"{item['trigger_rate']:>7.1f}%"
+            f"{item.get('stop_rate', 0):>6.1f}%"
+            f"{item['trigger_rate']:>6.1f}%"
             f"{item['p90_loss']:>+8.2f}%"
         )
 

@@ -242,12 +242,17 @@ def atr_percent_from_db(
     return atr_percent_from_bars(bars, period=period)
 
 
-def stop_loss_pct(atr_pct: Optional[float]) -> float:
-    """ATR 自适应止损（负值，百分比）。ATR 不可用时退回 -8%。"""
+def stop_loss_pct_scaled(atr_pct: Optional[float], multiplier: float) -> float:
+    """按指定 ATR 倍数计算止损（负值）。"""
     if not atr_pct or atr_pct <= 0:
         return -FALLBACK_STOP_LOSS_PCT
-    value = max(STOP_PCT_FLOOR, min(STOP_PCT_CEIL, ATR_STOP_MULTIPLIER * atr_pct))
+    value = max(STOP_PCT_FLOOR, min(STOP_PCT_CEIL, multiplier * atr_pct))
     return -round(value, 2)
+
+
+def stop_loss_pct(atr_pct: Optional[float]) -> float:
+    """ATR 自适应止损（负值，百分比）。ATR 不可用时退回 -8%。"""
+    return stop_loss_pct_scaled(atr_pct, ATR_STOP_MULTIPLIER)
 
 
 def take_profit_pct(atr_pct: Optional[float]) -> float:
