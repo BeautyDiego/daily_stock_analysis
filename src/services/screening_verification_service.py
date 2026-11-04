@@ -344,6 +344,7 @@ class ScreeningVerificationService:
                         policy_hits=_json_or_none(item.get("policy_hits")),
                         dedupe_note=str(item.get("dedupe_note") or "")[:255] or None,
                         strategy_version=str(item.get("strategy_version") or "")[:64] or None,
+                        industry=str(item.get("industry") or "")[:64] or None,
                     )
                 )
                 saved += 1

@@ -242,7 +242,13 @@ def plan_orders(
 
     with manager.get_session() as session:
         picks = (
-            session.query(ScreeningPick.code, ScreeningPick.name, ScreeningPick.entry_price)
+            session.query(
+                ScreeningPick.code,
+                ScreeningPick.name,
+                ScreeningPick.entry_price,
+                ScreeningPick.industry,
+                ScreeningPick.policy_hits,
+            )
             .filter(
                 ScreeningPick.pick_date == signal_date,
                 ScreeningPick.market == "cn",
@@ -271,7 +277,7 @@ def plan_orders(
         base_equity = float(os.getenv("PAPER_INITIAL_CASH", "20000") or 20000)
     budget = base_equity / max(1, base_slots)
 
-    for code, name, entry_price in picks:
+    for code, name, entry_price, industry, policy_hits in picks:
         # 用已生成的买单数量判断，而不是先切片：切片会把「已持有」的候选
         # 当成一个名额白白消耗掉，导致明明还有空位却不下单
         if len(result["buys"]) >= remaining_slots:
@@ -289,7 +295,7 @@ def plan_orders(
             continue
         _upsert_order(
             manager, account_id, trade_date, code, name, "buy", quantity,
-            reference, f"选股 {signal_date.isoformat()}",
+            reference, _buy_reason(signal_date, industry, policy_hits),
         )
         result["buys"].append(
             {
@@ -661,7 +667,11 @@ def notify_open_brief(result: Dict[str, Any], *, db: Optional[DatabaseManager] =
     initial = float(os.getenv("PAPER_INITIAL_CASH", "20000") or 20000)
     total_pct = (equity - initial) / initial * 100 if initial > 0 else None
 
+    filled = result.get("filled") or []
     lines = [f"【模拟盘·开盘】{_md_date(result.get('trade_date'))}", ""]
+    lines.append("【成交】")
+    lines.extend(_trade_lines(filled))
+    lines.append("")
     lines.extend(_holdings_block(holdings))
     lines.append("")
     lines.append("【账户】")
@@ -867,6 +877,66 @@ def _paper_account_id(manager: DatabaseManager) -> Optional[int]:
             .first()
         )
     return int(account.id) if account else None
+
+
+def _buy_reason(signal_date: date, industry: Any, policy_hits: Any) -> str:
+    """买入依据：信号日 + 行业 + 政策加成，供开盘简报展示。"""
+    parts = [f"选股 {signal_date.isoformat()}"]
+    if industry:
+        parts.append(str(industry))
+    delta = _policy_delta(policy_hits)
+    if delta:
+        parts.append(f"政策{delta:+.0f}")
+    return "｜".join(parts)
+
+
+def _policy_delta(policy_hits: Any) -> float:
+    """从 ``screening_picks.policy_hits`` 汇总政策加分。"""
+    import json
+
+    if not policy_hits:
+        return 0.0
+    try:
+        items = (
+            json.loads(policy_hits)
+            if isinstance(policy_hits, str)
+            else policy_hits
+        )
+    except (TypeError, ValueError):
+        return 0.0
+
+    total = 0.0
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            total += float(item.get("delta") or 0.0)
+        except (TypeError, ValueError):
+            continue
+    return total
+
+
+def _trade_lines(filled: Sequence[Dict[str, Any]]) -> List[str]:
+    """成交段：名称 + 股数 + 价格 + 金额，并附买入依据。"""
+    if not filled:
+        return ["买入 无｜卖出 无"]
+
+    lines: List[str] = []
+    for side, label in (("buy", "买入"), ("sell", "卖出")):
+        items = [item for item in filled if item.get("side") == side]
+        if not items:
+            lines.append(f"{label} 无")
+            continue
+        for item in items[:5]:
+            price = float(item.get("price") or 0.0)
+            quantity = float(item.get("quantity") or 0.0)
+            lines.append(
+                f"{label} {item.get('name') or ''} {item.get('code')}  "
+                f"{int(quantity)}股 @{price:.2f}  共 {price * quantity:.0f} 元"
+            )
+            if item.get("reason"):
+                lines.append(f"  依据：{item.get('reason')}")
+    return lines
 
 
 def _upsert_order(

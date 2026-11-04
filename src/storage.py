@@ -364,6 +364,8 @@ class ScreeningPick(Base):
     policy_hits = Column(Text)
     dedupe_note = Column(Text)
     strategy_version = Column(String(64))
+    # 入选时的行业（用于简报展示买入依据、事后归因行业分散效果）
+    industry = Column(String(64))
 
     created_at = Column(DateTime, default=datetime.now, index=True)
 
@@ -1670,6 +1672,7 @@ class DatabaseManager(metaclass=_DatabaseManagerMeta):
                     ("policy_hits", "TEXT"),
                     ("dedupe_note", "TEXT"),
                     ("strategy_version", "VARCHAR(64)"),
+                    ("industry", "VARCHAR(64)"),
                 ),
             ),
             (

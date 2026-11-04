@@ -320,6 +320,39 @@ class PaperBotTestCase(unittest.TestCase):
         self.assertEqual(len(stats["filled"]), 1)
 
     # ------------------------------------------------------------------
+    # 简报文案
+    # ------------------------------------------------------------------
+
+    def test_buy_reason_includes_industry_and_policy(self):
+        reason = paper_bot_service._buy_reason(
+            date(2026, 11, 3), "银行", '[{"delta": 5}]'
+        )
+        self.assertEqual(reason, "选股 2026-11-03｜银行｜政策+5")
+
+    def test_buy_reason_degrades_without_industry(self):
+        reason = paper_bot_service._buy_reason(date(2026, 11, 3), None, None)
+        self.assertEqual(reason, "选股 2026-11-03")
+
+    def test_trade_lines_render_amount_and_reason(self):
+        lines = paper_bot_service._trade_lines(
+            [
+                {
+                    "code": "600919",
+                    "name": "江苏银行",
+                    "side": "buy",
+                    "quantity": 300,
+                    "price": 12.54,
+                    "reason": "选股 2026-11-02｜银行｜政策+5",
+                }
+            ]
+        )
+        self.assertIn("买入 江苏银行 600919  300股 @12.54  共 3762 元", lines[0])
+        self.assertIn("依据", lines[1])
+
+    def test_trade_lines_handle_empty_fill(self):
+        self.assertEqual(paper_bot_service._trade_lines([]), ["买入 无｜卖出 无"])
+
+    # ------------------------------------------------------------------
     # 收盘结算
     # ------------------------------------------------------------------
 
