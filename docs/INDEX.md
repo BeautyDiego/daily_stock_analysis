@@ -75,10 +75,4 @@
 | [API 规格](architecture/api_spec.json) | FastAPI OpenAPI 规格产物 |
 | [贡献指南](CONTRIBUTING.md) | Issue、PR、测试、文档同步和协作要求 |
 
-## 多语言
 
-| 文档 | 内容 |
-| --- | --- |
-| [英文文档索引](INDEX_EN.md) | English documentation index |
-| [英文 README](README_EN.md) | English project overview and quick start |
-| [繁中 README](README_CHT.md) | 繁體中文項目概覽與快速開始 |
