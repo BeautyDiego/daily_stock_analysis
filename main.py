@@ -631,6 +631,27 @@ def parse_arguments() -> argparse.Namespace:
         help='同步的交易日数，默认 120'
     )
 
+    # === 止盈方式对比 ===
+    parser.add_argument(
+        '--take-profit-study',
+        action='store_true',
+        help='止盈方式对比回测：一次性 vs 分批 vs 移动止盈（配对样本）'
+    )
+
+    parser.add_argument(
+        '--tp-max-hold',
+        type=int,
+        default=10,
+        help='最长持有交易日，默认 10'
+    )
+
+    parser.add_argument(
+        '--tp-multiplier',
+        type=float,
+        default=None,
+        help='止盈倍数（×ATR），不填则用策略默认 4 倍'
+    )
+
     return parser.parse_args()
 
 
@@ -1674,6 +1695,7 @@ def _skips_stock_entry(args: argparse.Namespace, config: Config) -> bool:
         or getattr(args, "paper_trade_now", False)
         or getattr(args, "factor_layering", False)
         or getattr(args, "sync_universe", False)
+        or getattr(args, "take_profit_study", False)
         or getattr(args, "market_review", False)
         or getattr(args, "serve_only", False)
         or getattr(args, "webui_only", False)
@@ -2206,6 +2228,21 @@ def main() -> int:
                     f"@{item.get('price')}（{item.get('reason')}）"
                 )
             return 0
+
+        # 模式0.22: 止盈方式对比
+        if getattr(args, 'take_profit_study', False):
+            logger.info("模式: 止盈方式对比")
+            from src.services.cn_tracker.take_profit_study import (
+                build_study_report,
+                compare_take_profit,
+            )
+
+            stats = compare_take_profit(
+                max_hold_days=int(getattr(args, 'tp_max_hold', 10) or 10),
+                target_multiplier=getattr(args, 'tp_multiplier', None),
+            )
+            print(build_study_report(stats))
+            return 0 if not stats.get("error") else 1
 
         # 模式0.21: 全市场日线同步
         if getattr(args, 'sync_universe', False):
