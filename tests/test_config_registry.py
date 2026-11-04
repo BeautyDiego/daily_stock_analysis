@@ -446,7 +446,6 @@ class TestSettingsHelpMetadata(unittest.TestCase):
             field = get_field_definition(key)
             self.assertTrue(field.get("help_key"), f"{key} missing help_key")
             self.assertTrue(field.get("examples"), f"{key} missing examples")
-            self.assertTrue(field.get("docs"), f"{key} missing docs")
 
     def test_web_settings_visible_fields_have_help_metadata(self):
         """Every field rendered by SettingsField must have Help metadata."""
@@ -461,7 +460,7 @@ class TestSettingsHelpMetadata(unittest.TestCase):
                 # they are still visible/configurable in legacy setups.
                 pass
 
-            if not field.get("help_key") or not field.get("examples") or not field.get("docs"):
+            if not field.get("help_key") or not field.get("examples"):
                 missing.append(key)
 
         self.assertEqual([], missing)
@@ -483,8 +482,6 @@ class TestSettingsHelpMetadata(unittest.TestCase):
         self.assertEqual(field["display_order"], 52)
         self.assertEqual(field["help_key"], "settings.system.SAVE_CONTEXT_SNAPSHOT")
         self.assertTrue(field.get("examples"))
-        self.assertTrue(field.get("docs"))
-        self.assertIn("analysis-context-pack.md#p6-", field["docs"][0]["href"])
 
     def test_restart_warning_codes_match_runtime_behavior(self):
         restart_required_keys = (
@@ -516,7 +513,6 @@ class TestSettingsHelpMetadata(unittest.TestCase):
         }
 
         self.assertEqual(fields["STOCK_LIST"]["help_key"], "settings.base.STOCK_LIST")
-        self.assertIn("docs/full-guide.md", fields["STOCK_LIST"]["docs"][0]["href"])
 
     def test_admin_auth_help_is_read_only_in_generic_settings(self):
         field = get_field_definition("ADMIN_AUTH_ENABLED")
@@ -541,7 +537,6 @@ class TestIssue1512SettingsFields(unittest.TestCase):
             self.assertEqual(field["display_order"], display_order)
             self.assertTrue(field.get("help_key"))
             self.assertTrue(field.get("examples"))
-            self.assertTrue(field.get("docs"))
             self.assertIn("not_webhook_delivery", field.get("warning_codes", []))
             self.assertIn("restart_required", field.get("warning_codes", []))
 
@@ -560,7 +555,6 @@ class TestIssue1512SettingsFields(unittest.TestCase):
             self.assertEqual(field["display_order"], display_order)
             self.assertTrue(field.get("help_key"))
             self.assertTrue(field.get("examples"))
-            self.assertTrue(field.get("docs"))
             self.assertIn("restart_required", field.get("warning_codes", []))
 
 
@@ -855,7 +849,6 @@ class TestDingTalkWebhookFieldsRegistered(unittest.TestCase):
             self.assertTrue(field["is_sensitive"])
             self.assertEqual(field["help_key"], help_key)
             self.assertTrue(field["examples"])
-            self.assertTrue(field["docs"])
             self.assertNotIn(key, WEB_SETTINGS_HIDDEN_FROM_UI)
 
     def test_dingtalk_webhook_url_has_url_validation(self):

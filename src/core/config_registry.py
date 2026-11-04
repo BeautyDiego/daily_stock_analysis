@@ -104,16 +104,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "STOCK_LIST=600519,300750,002594",
             "STOCK_LIST=600519,hk00700,AAPL",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-            {
-                "label": "Tushare 股票列表指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/TUSHARE_STOCK_LIST_GUIDE.md",
-            },
-        ],
         "warning_codes": [],
     },
     # ------------------------------------------------------------------
@@ -144,12 +134,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "GENERATION_BACKEND=claude_code_cli",
             "GENERATION_BACKEND=opencode_cli",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-        ],
         "warning_codes": [],
     },
     "OPENCODE_CLI_MODEL": {
@@ -169,12 +153,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "OPENCODE_CLI_MODEL=provider/model",
             "OPENCODE_CLI_MODEL=opencode/model-name",
-        ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
         ],
         "warning_codes": [],
     },
@@ -196,12 +174,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "display_order": 0,
         "help_key": "settings.ai_model.GENERATION_FALLBACK_BACKEND",
         "examples": ["GENERATION_FALLBACK_BACKEND=litellm", "GENERATION_FALLBACK_BACKEND="],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-        ],
         "warning_codes": [],
     },
     "GENERATION_BACKEND_TIMEOUT_SECONDS": {
@@ -219,12 +191,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "display_order": 1,
         "help_key": "settings.ai_model.GENERATION_BACKEND_TIMEOUT_SECONDS",
         "examples": ["GENERATION_BACKEND_TIMEOUT_SECONDS=300"],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-        ],
         "warning_codes": [],
     },
     "GENERATION_BACKEND_MAX_OUTPUT_BYTES": {
@@ -245,12 +211,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "display_order": 1,
         "help_key": "settings.ai_model.GENERATION_BACKEND_MAX_OUTPUT_BYTES",
         "examples": ["GENERATION_BACKEND_MAX_OUTPUT_BYTES=1048576"],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-        ],
         "warning_codes": [],
     },
     "GENERATION_BACKEND_MAX_CONCURRENCY": {
@@ -268,12 +228,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "display_order": 1,
         "help_key": "settings.ai_model.GENERATION_BACKEND_MAX_CONCURRENCY",
         "examples": ["GENERATION_BACKEND_MAX_CONCURRENCY=1"],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-        ],
         "warning_codes": [],
     },
     "LOCAL_CLI_BACKEND_MAX_CONCURRENCY": {
@@ -291,12 +245,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "display_order": 1,
         "help_key": "settings.ai_model.LOCAL_CLI_BACKEND_MAX_CONCURRENCY",
         "examples": ["LOCAL_CLI_BACKEND_MAX_CONCURRENCY=1"],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-        ],
         "warning_codes": [],
     },
     "LITELLM_MODEL": {
@@ -318,28 +266,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "LITELLM_MODEL=gemini/gemini-3.1-pro-preview",
             "LITELLM_MODEL=ollama/qwen3:8b",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-            {
-                "label": "完整指南：AI 模型配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#ai-模型配置",
-            },
-            {
-                "label": "LiteLLM Providers（官方）",
-                "href": "https://docs.litellm.ai/docs/providers",
-            },
-            {
-                "label": "LiteLLM OpenAI-compatible（官方）",
-                "href": "https://docs.litellm.ai/docs/providers/openai_compatible",
-            },
-            {
-                "label": "LiteLLM model_list（官方）",
-                "href": "https://docs.litellm.ai/docs/proxy/configs#the-model_list-key",
-            },
-        ],
         "warning_codes": ["provider_prefix_required"],
     },
     "AGENT_LITELLM_MODEL": {
@@ -360,16 +286,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_LITELLM_MODEL=deepseek/deepseek-v4-pro",
             "AGENT_LITELLM_MODEL=gemini/gemini-3.1-pro-preview",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-            {
-                "label": "完整指南：AI 模型配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#ai-模型配置",
-            },
-        ],
         "warning_codes": ["inherits_primary_when_empty"],
     },
     "LITELLM_FALLBACK_MODELS": {
@@ -389,24 +305,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "LITELLM_FALLBACK_MODELS=deepseek/deepseek-v4-pro,gemini/gemini-3-flash-preview",
             "LITELLM_FALLBACK_MODELS=openai/gpt-5.4-mini",
-        ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-            {
-                "label": "完整指南：AI 模型配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#ai-模型配置",
-            },
-            {
-                "label": "LiteLLM Providers（官方）",
-                "href": "https://docs.litellm.ai/docs/providers",
-            },
-            {
-                "label": "LiteLLM config（官方）",
-                "href": "https://docs.litellm.ai/docs/proxy/configs",
-            },
         ],
         "warning_codes": ["fallback_models_must_be_available"],
     },
@@ -430,16 +328,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "LITELLM_CONFIG=./litellm_config.yaml",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南：YAML 模式",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md#方式三litellm-原生-yaml-配置适合专家或复杂路由",
-            },
-            {
-                "label": "LiteLLM proxy config（官方）",
-                "href": "https://docs.litellm.ai/docs/proxy/configs",
-            },
-        ],
         "warning_codes": ["yaml_config_overrides_channel_editor"],
     },
     "LLM_CHANNELS": {
@@ -462,20 +350,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "LLM_DEEPSEEK_API_KEY=sk-xxxx",
             "LLM_DEEPSEEK_MODELS=deepseek-v4-flash,deepseek-v4-pro",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南：渠道模式",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md#方式二渠道channels模式配置适合进阶多模型",
-            },
-            {
-                "label": "LLM 服务商配置速查",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/llm-providers.md",
-            },
-            {
-                "label": "LiteLLM OpenAI-compatible（官方）",
-                "href": "https://docs.litellm.ai/docs/providers/openai_compatible",
-            },
-        ],
         "warning_codes": ["channels_override_legacy_keys"],
     },
     "LLM_TEMPERATURE": {
@@ -495,12 +369,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "LLM_TEMPERATURE=0.2",
             "LLM_TEMPERATURE=0.7",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：AI 模型配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#ai-模型配置",
-            },
         ],
         "warning_codes": [],
     },
@@ -522,12 +390,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "LLM_PROMPT_CACHE_TELEMETRY_ENABLED=true",
             "LLM_PROMPT_CACHE_TELEMETRY_ENABLED=false",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-        ],
         "warning_codes": [],
     },
     "LLM_PROMPT_CACHE_HINTS_ENABLED": {
@@ -546,12 +408,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "help_key": "settings.ai_model.LLM_PROMPT_CACHE_HINTS_ENABLED",
         "examples": [
             "LLM_PROMPT_CACHE_HINTS_ENABLED=false",
-        ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
         ],
         "warning_codes": [],
     },
@@ -577,12 +433,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "LLM_PROMPT_CACHE_DIAGNOSTICS_LEVEL=off",
             "LLM_PROMPT_CACHE_DIAGNOSTICS_LEVEL=basic",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-        ],
         "warning_codes": [],
     },
     "LLM_USAGE_HMAC_SECRET": {
@@ -601,12 +451,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "help_key": "settings.ai_model.LLM_USAGE_HMAC_SECRET",
         "examples": [
             "LLM_USAGE_HMAC_SECRET=<64-char random hex from openssl rand -hex 32>",
-        ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
         ],
         "warning_codes": ["secret_value"],
     },
@@ -627,12 +471,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "LLM_USAGE_HMAC_KEY_VERSION=prod-2026-06",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-        ],
         "warning_codes": [],
     },
     "AIHUBMIX_KEY": {
@@ -651,16 +489,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "help_key": "settings.ai_model.provider_keys",
         "examples": [
             "AIHUBMIX_KEY=sk-xxxx",
-        ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-            {
-                "label": "LLM 服务商配置速查",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/llm-providers.md",
-            },
         ],
         "warning_codes": ["secret_value"],
     },
@@ -727,16 +555,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "DEEPSEEK_API_KEY=sk-xxxx",
             "LITELLM_MODEL=deepseek/deepseek-v4-flash",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-            {
-                "label": "LLM 服务商配置速查",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/llm-providers.md",
-            },
-        ],
         "warning_codes": ["secret_value"],
     },
     "DEEPSEEK_API_KEYS": {
@@ -769,16 +587,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "help_key": "settings.data_source.TUSHARE_TOKEN",
         "examples": [
             "TUSHARE_TOKEN=your_tushare_token",
-        ],
-        "docs": [
-            {
-                "label": "Tushare 股票列表指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/TUSHARE_STOCK_LIST_GUIDE.md",
-            },
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": ["secret_value"],
     },
@@ -895,12 +703,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "display_order": 20,
         "help_key": "settings.data_source.FUTU_OPEND_HOST",
         "examples": ["FUTU_OPEND_HOST=127.0.0.1"],
-        "docs": [
-            {
-                "label": "数据源配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#数据源配置",
-            },
-        ],
         "warning_codes": [],
     },
     "FUTU_OPEND_PORT": {
@@ -918,12 +720,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "display_order": 21,
         "help_key": "settings.data_source.FUTU_OPEND_PORT",
         "examples": ["FUTU_OPEND_PORT=11111"],
-        "docs": [
-            {
-                "label": "数据源配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#数据源配置",
-            },
-        ],
         "warning_codes": [],
     },
     "FUTU_HK_REALTIME_SOURCE_PRIORITY": {
@@ -941,12 +737,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "display_order": 22,
         "help_key": "settings.data_source.FUTU_HK_REALTIME_SOURCE_PRIORITY",
         "examples": ["FUTU_HK_REALTIME_SOURCE_PRIORITY=futu,longbridge,akshare,yfinance"],
-        "docs": [
-            {
-                "label": "数据源配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#数据源配置",
-            },
-        ],
         "warning_codes": ["provider_priority_order"],
     },
     "STOCK_INDEX_REMOTE_UPDATE_ENABLED": {
@@ -966,12 +756,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "STOCK_INDEX_REMOTE_UPDATE_ENABLED=true",
             "STOCK_INDEX_REMOTE_UPDATE_ENABLED=false",
-        ],
-        "docs": [
-            {
-                "label": "Tushare 股票列表指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/TUSHARE_STOCK_LIST_GUIDE.md",
-            },
         ],
         "warning_codes": [],
     },
@@ -993,24 +777,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "SCREENING_ENABLED=false",
             "SCREENING_ENABLED=true",
         ],
-        "docs": [
-            {
-                "label": "LiteLLM Providers（官方）",
-                "href": "https://docs.litellm.ai/docs/providers",
-            },
-            {
-                "label": "LiteLLM OpenAI-compatible（官方）",
-                "href": "https://docs.litellm.ai/docs/providers/openai_compatible",
-            },
-            {
-                "label": "OpenAI 请求与鉴权（官方）",
-                "href": "https://platform.openai.com/docs/api-reference/authentication",
-            },
-            {
-                "label": "选股说明",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/screening-engine.md",
-            },
-        ],
     },
     "SCREENING_PICKS_TOP_N": {
         "title": "Daily Picks Per Market",
@@ -1028,12 +794,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "help_key": "settings.base.SCREENING_PICKS_TOP_N",
         "examples": [
             "SCREENING_PICKS_TOP_N=5",
-        ],
-        "docs": [
-            {
-                "label": "选股验证看板",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/pick-verification.md",
-            },
         ],
     },
     "SCREENING_PICKS_NOTIFY_ENABLED": {
@@ -1054,12 +814,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "SCREENING_PICKS_NOTIFY_ENABLED=true",
             "SCREENING_PICKS_NOTIFY_ENABLED=false",
         ],
-        "docs": [
-            {
-                "label": "选股验证看板",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/pick-verification.md",
-            },
-        ],
     },
     "REALTIME_SOURCE_PRIORITY": {
         "title": "Realtime Source Priority",
@@ -1077,12 +831,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "help_key": "settings.data_source.REALTIME_SOURCE_PRIORITY",
         "examples": [
             "REALTIME_SOURCE_PRIORITY=tencent,akshare_sina,efinance,akshare_em",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：数据源配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#数据源配置",
-            },
         ],
         "warning_codes": ["provider_priority_order"],
     },
@@ -1104,12 +852,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "ENABLE_REALTIME_TECHNICAL_INDICATORS=true",
             "ENABLE_REALTIME_TECHNICAL_INDICATORS=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：数据源配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#数据源配置",
-            },
-        ],
         "warning_codes": [],
     },
     "ANSPIRE_API_KEYS": {
@@ -1128,12 +870,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "help_key": "settings.data_source.search_api_keys",
         "examples": [
             "ANSPIRE_API_KEYS=key1,key2",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：搜索服务配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#搜索服务配置",
-            },
         ],
         "warning_codes": ["secret_value", "comma_separated_keys"],
     },
@@ -1154,12 +890,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "TAVILY_API_KEYS=tvly-xxxx",
             "TAVILY_API_KEYS=tvly-key-1,tvly-key-2",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：搜索服务配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#搜索服务配置",
-            },
         ],
         "warning_codes": ["secret_value", "comma_separated_keys"],
     },
@@ -1242,12 +972,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "SEARXNG_BASE_URLS=https://search.example.com",
             "SEARXNG_PUBLIC_INSTANCES_ENABLED=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：搜索服务配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#搜索服务配置",
-            },
-        ],
         "warning_codes": ["requires_json_format"],
     },
     "SEARXNG_PUBLIC_INSTANCES_ENABLED": {
@@ -1282,12 +1006,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "ENABLE_REALTIME_QUOTE=true",
             "ENABLE_REALTIME_QUOTE=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：数据源配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#数据源配置",
-            },
-        ],
         "warning_codes": [],
     },
     "ENABLE_CHIP_DISTRIBUTION": {
@@ -1307,12 +1025,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "ENABLE_CHIP_DISTRIBUTION=true",
             "ENABLE_CHIP_DISTRIBUTION=false",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：数据源配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#数据源配置",
-            },
         ],
         "warning_codes": ["cloud_deployments_may_disable"],
     },
@@ -1334,12 +1046,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "NEWS_MAX_AGE_DAYS=3",
             "NEWS_STRATEGY_PROFILE=short",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "NEWS_STRATEGY_PROFILE": {
@@ -1359,12 +1065,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "NEWS_STRATEGY_PROFILE=short",
             "NEWS_MAX_AGE_DAYS=3",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -1441,16 +1141,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "GEMINI_API_KEY=your_gemini_api_key",
             "LITELLM_MODEL=gemini/gemini-3.1-pro-preview",
-        ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-            {
-                "label": "LLM 服务商配置速查",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/llm-providers.md",
-            },
         ],
         "warning_codes": ["secret_value"],
     },
@@ -1529,16 +1219,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "OPENAI_BASE_URL=https://api.example.com/v1",
             "LITELLM_MODEL=openai/gpt-5.5",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-            {
-                "label": "LLM 服务商配置速查",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/llm-providers.md",
-            },
-        ],
         "warning_codes": ["secret_value"],
     },
     "OPENAI_API_KEYS": {
@@ -1572,16 +1252,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "OPENAI_BASE_URL=https://api.openai.com/v1",
             "OPENAI_BASE_URL=https://api.example.com/v1",
-        ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-            {
-                "label": "LLM 服务商配置速查",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/llm-providers.md",
-            },
         ],
         "warning_codes": ["base_url_must_match_provider"],
     },
@@ -1644,16 +1314,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "ANTHROPIC_API_KEY=sk-ant-xxxx",
             "LITELLM_MODEL=anthropic/claude-sonnet-4-6",
-        ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-            {
-                "label": "LLM 服务商配置速查",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/llm-providers.md",
-            },
         ],
         "warning_codes": ["secret_value"],
     },
@@ -1730,12 +1390,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "WECHAT_WEBHOOK_URL=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx",
         ],
-        "docs": [
-            {
-                "label": "完整指南：通知渠道配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#通知渠道详细配置",
-            },
-        ],
         "warning_codes": ["webhook_secret_value"],
     },
     "DINGTALK_APP_KEY": {
@@ -1786,12 +1440,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "DINGTALK_APP_KEY=your_dingtalk_app_key",
             "DINGTALK_APP_SECRET=your_dingtalk_app_secret",
         ],
-        "docs": [
-            {
-                "label": "完整指南：通知渠道配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#通知渠道详细配置",
-            },
-        ],
         "warning_codes": ["not_webhook_delivery", "restart_required"],
     },
     "DINGTALK_WEBHOOK_URL": {
@@ -1814,12 +1462,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "DINGTALK_WEBHOOK_URL=https://oapi.dingtalk.com/robot/send?access_token=your_token",
         ],
-        "docs": [
-            {
-                "label": "完整指南：通知渠道配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#通知渠道详细配置",
-            },
-        ],
         "warning_codes": ["webhook_secret_value"],
     },
     "DINGTALK_SECRET": {
@@ -1838,12 +1480,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "help_key": "settings.notification.DINGTALK_SECRET",
         "examples": [
             "DINGTALK_SECRET=your_dingtalk_signing_secret",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：通知渠道配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#通知渠道详细配置",
-            },
         ],
         "warning_codes": ["secret_value"],
     },
@@ -1880,12 +1516,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         ],
         "validation": {"multi_value": True, "delimiter": ","},
         "display_order": 50,
-        "docs": [
-            {
-                "label": "完整指南：自定义 Webhook",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#自定义-webhook",
-            },
-        ],
         "warning_codes": ["json_template_must_render_object"],
     },
     "CUSTOM_WEBHOOK_BEARER_TOKEN": {
@@ -1939,12 +1569,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "WEBHOOK_VERIFY_SSL=true",
             "WEBHOOK_VERIFY_SSL=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：自定义 Webhook",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#自定义-webhook",
-            },
-        ],
         "warning_codes": ["disabling_ssl_verify_is_risky"],
     },
     "REPORT_SUMMARY_ONLY": {
@@ -1965,12 +1589,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "REPORT_SUMMARY_ONLY=true",
             "REPORT_SUMMARY_ONLY=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "REPORT_SHOW_LLM_MODEL": {
@@ -1990,12 +1608,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "REPORT_SHOW_LLM_MODEL=true",
             "REPORT_SHOW_LLM_MODEL=false",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -2023,16 +1635,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/your_hook_token",
             "FEISHU_WEBHOOK_SECRET=your_feishu_webhook_secret",
             "FEISHU_WEBHOOK_KEYWORD=股票日报",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：飞书通知配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#飞书",
-            },
-            {
-                "label": "飞书机器人配置专题",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/bot/feishu-bot-config.md",
-            },
         ],
         "warning_codes": ["feishu_webhook_not_app_secret"],
     },
@@ -2112,16 +1714,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "FEISHU_APP_ID=cli_xxxxx",
             "FEISHU_APP_SECRET=your_feishu_app_secret",
         ],
-        "docs": [
-            {
-                "label": "完整指南：飞书通知配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#飞书",
-            },
-            {
-                "label": "飞书机器人配置专题",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/bot/feishu-bot-config.md",
-            },
-        ],
         "warning_codes": ["not_webhook_delivery", "restart_required"],
     },
     "FEISHU_CHAT_ID": {
@@ -2142,12 +1734,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "FEISHU_CHAT_ID=oc_xxxxxxxxxxxxx",
             "FEISHU_CHAT_ID=ou_xxxxxxxxxxxxx",
         ],
-        "docs": [
-            {
-                "label": "完整指南：飞书通知配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#飞书",
-            },
-        ],
     },
     "FEISHU_RECEIVE_ID_TYPE": {
         "title": "Feishu Receive ID Type",
@@ -2167,12 +1753,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "FEISHU_RECEIVE_ID_TYPE=chat_id",
             "FEISHU_RECEIVE_ID_TYPE=open_id",
         ],
-        "docs": [
-            {
-                "label": "完整指南：飞书通知配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#飞书",
-            },
-        ],
     },
     "FEISHU_DOMAIN": {
         "title": "Feishu Domain",
@@ -2191,12 +1771,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "FEISHU_DOMAIN=feishu",
             "FEISHU_DOMAIN=lark",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：飞书通知配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#飞书",
-            },
         ],
     },
     # ------------------------------------------------------------------
@@ -2220,12 +1794,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "TELEGRAM_BOT_TOKEN=123456:ABC-DEF",
             "TELEGRAM_CHAT_ID=-1001234567890",
         ],
-        "docs": [
-            {
-                "label": "完整指南：Telegram",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#telegram",
-            },
-        ],
         "warning_codes": ["secret_value"],
     },
     "TELEGRAM_CHAT_ID": {
@@ -2245,12 +1813,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "TELEGRAM_CHAT_ID=-1001234567890",
             "TELEGRAM_MESSAGE_THREAD_ID=123",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：Telegram",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#telegram",
-            },
         ],
         "warning_codes": [],
     },
@@ -2290,12 +1852,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "EMAIL_PASSWORD=your_smtp_authorization_code",
             "EMAIL_RECEIVERS=user1@example.com,user2@example.com",
         ],
-        "docs": [
-            {
-                "label": "完整指南：邮件",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#邮件",
-            },
-        ],
         "warning_codes": [],
     },
     "EMAIL_PASSWORD": {
@@ -2314,12 +1870,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "help_key": "settings.notification.email",
         "examples": [
             "EMAIL_PASSWORD=your_smtp_authorization_code",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：邮件",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#邮件",
-            },
         ],
         "warning_codes": ["secret_value", "smtp_authorization_code"],
     },
@@ -2341,12 +1891,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "EMAIL_RECEIVERS=user1@example.com,user2@example.com",
             "STOCK_GROUP_1=600519,300750",
             "EMAIL_GROUP_1=user1@example.com",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：邮件",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#邮件",
-            },
         ],
         "warning_codes": ["comma_separated_values"],
     },
@@ -2370,12 +1914,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/xxx/yyy",
         ],
-        "docs": [
-            {
-                "label": "完整指南：Discord",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#discord",
-            },
-        ],
         "warning_codes": ["webhook_secret_value"],
     },
     "DISCORD_BOT_TOKEN": {
@@ -2395,12 +1933,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "DISCORD_BOT_TOKEN=your_discord_bot_token",
             "DISCORD_MAIN_CHANNEL_ID=123456789012345678",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：Discord",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#discord",
-            },
         ],
         "warning_codes": ["secret_value"],
     },
@@ -2452,12 +1984,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "SLACK_BOT_TOKEN=xoxb-xxxx",
             "SLACK_CHANNEL_ID=C0123456789",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：通知渠道配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#通知渠道详细配置",
-            },
         ],
         "warning_codes": ["secret_value"],
     },
@@ -2662,12 +2188,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "SINGLE_STOCK_NOTIFY=true",
             "SINGLE_STOCK_NOTIFY=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "REPORT_TYPE": {
@@ -2688,12 +2208,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "REPORT_TYPE=simple",
             "REPORT_TYPE=full",
             "REPORT_LANGUAGE=zh",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -2720,12 +2234,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "REPORT_LANGUAGE=en",
             "REPORT_LANGUAGE=ko",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "REPORT_TEMPLATES_DIR": {
@@ -2745,12 +2253,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "REPORT_TEMPLATES_DIR=templates",
             "REPORT_TEMPLATES_DIR=custom_templates",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -2772,12 +2274,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "REPORT_RENDERER_ENABLED=true",
             "REPORT_RENDERER_ENABLED=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "REPORT_INTEGRITY_ENABLED": {
@@ -2797,12 +2293,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "REPORT_INTEGRITY_ENABLED=true",
             "REPORT_INTEGRITY_RETRY=1",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -2824,12 +2314,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "REPORT_INTEGRITY_RETRY=1",
             "REPORT_INTEGRITY_RETRY=0",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "REPORT_HISTORY_COMPARE_N": {
@@ -2849,12 +2333,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "REPORT_HISTORY_COMPARE_N=0",
             "REPORT_HISTORY_COMPARE_N=5",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -2876,12 +2354,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "MERGE_EMAIL_NOTIFICATION=true",
             "MERGE_EMAIL_NOTIFICATION=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "NOTIFICATION_REPORT_CHANNELS": {
@@ -2901,12 +2373,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "NOTIFICATION_REPORT_CHANNELS=email,feishu",
             "NOTIFICATION_REPORT_CHANNELS=",
-        ],
-        "docs": [
-            {
-                "label": "通知渠道与路由",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/notifications.md",
-            },
         ],
         "warning_codes": [],
     },
@@ -2928,12 +2394,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "NOTIFICATION_ALERT_CHANNELS=feishu,telegram",
             "NOTIFICATION_ALERT_CHANNELS=",
         ],
-        "docs": [
-            {
-                "label": "通知渠道与路由",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/notifications.md",
-            },
-        ],
         "warning_codes": [],
     },
     "NOTIFICATION_SYSTEM_ERROR_CHANNELS": {
@@ -2953,12 +2413,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "NOTIFICATION_SYSTEM_ERROR_CHANNELS=email",
             "NOTIFICATION_SYSTEM_ERROR_CHANNELS=",
-        ],
-        "docs": [
-            {
-                "label": "通知渠道与路由",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/notifications.md",
-            },
         ],
         "warning_codes": [],
     },
@@ -2980,12 +2434,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "NOTIFICATION_DEDUP_TTL_SECONDS=3600",
             "NOTIFICATION_COOLDOWN_SECONDS=600",
         ],
-        "docs": [
-            {
-                "label": "通知渠道与路由",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/notifications.md",
-            },
-        ],
         "warning_codes": [],
     },
     "NOTIFICATION_COOLDOWN_SECONDS": {
@@ -3005,12 +2453,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "NOTIFICATION_COOLDOWN_SECONDS=600",
             "NOTIFICATION_DEDUP_TTL_SECONDS=3600",
-        ],
-        "docs": [
-            {
-                "label": "通知渠道与路由",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/notifications.md",
-            },
         ],
         "warning_codes": [],
     },
@@ -3032,12 +2474,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "NOTIFICATION_QUIET_HOURS=23:00-07:00",
             "NOTIFICATION_TIMEZONE=Asia/Shanghai",
         ],
-        "docs": [
-            {
-                "label": "通知渠道与路由",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/notifications.md",
-            },
-        ],
         "warning_codes": [],
     },
     "NOTIFICATION_TIMEZONE": {
@@ -3057,12 +2493,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "NOTIFICATION_TIMEZONE=Asia/Shanghai",
             "NOTIFICATION_TIMEZONE=America/New_York",
-        ],
-        "docs": [
-            {
-                "label": "通知渠道与路由",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/notifications.md",
-            },
         ],
         "warning_codes": [],
     },
@@ -3087,12 +2517,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "NOTIFICATION_MIN_SEVERITY=warning",
             "NOTIFICATION_MIN_SEVERITY=",
         ],
-        "docs": [
-            {
-                "label": "通知渠道与路由",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/notifications.md",
-            },
-        ],
         "warning_codes": [],
     },
     "NOTIFICATION_DAILY_DIGEST_ENABLED": {
@@ -3111,12 +2535,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "help_key": "settings.notification.DAILY_DIGEST_ENABLED",
         "examples": [
             "NOTIFICATION_DAILY_DIGEST_ENABLED=false",
-        ],
-        "docs": [
-            {
-                "label": "通知渠道与路由",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/notifications.md",
-            },
         ],
         "warning_codes": ["reserved_flag"],
     },
@@ -3139,12 +2557,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "SCHEDULE_ENABLED=true",
             "SCHEDULE_RUN_IMMEDIATELY=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：其他配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#其他配置",
-            },
-        ],
         "warning_codes": ["local_timezone"],
     },
     "SCHEDULE_TIMES": {
@@ -3166,12 +2578,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "SCHEDULE_TIME=18:00",
             "SCHEDULE_ENABLED=true",
         ],
-        "docs": [
-            {
-                "label": "Full guide: configuration",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#其他配置",
-            },
-        ],
         "warning_codes": ["local_timezone"],
     },
     "DSA_RUNTIME_SCHEDULER_TIMEOUT_SECONDS": {
@@ -3190,12 +2596,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "help_key": "settings.system.schedule",
         "examples": [
             "DSA_RUNTIME_SCHEDULER_TIMEOUT_SECONDS=2700",
-        ],
-        "docs": [
-            {
-                "label": "Full guide: configuration",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#其他配置",
-            },
         ],
         "warning_codes": [],
     },
@@ -3220,12 +2620,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "DSA_TIMEOUT_PARTIAL_NOTIFY=true",
             "DSA_TIMEOUT_PARTIAL_NOTIFY=false",
         ],
-        "docs": [
-            {
-                "label": "Full guide: configuration",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#其他配置",
-            },
-        ],
         "warning_codes": [],
     },
     "HTTP_PROXY": {
@@ -3245,12 +2639,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "HTTP_PROXY=http://127.0.0.1:7890",
             "HTTPS_PROXY=http://127.0.0.1:7890",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": ["network_scope"],
     },
@@ -3272,12 +2660,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "LOG_LEVEL=INFO",
             "LOG_LEVEL=DEBUG",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": ["restart_required"],
     },
     "LOG_DIR": {
@@ -3297,12 +2679,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "LOG_DIR=./logs",
             "LOG_DIR=/app/logs",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": ["restart_required", "path_must_be_writable"],
     },
@@ -3324,16 +2700,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "WEBUI_ENABLED=false",
             "WEBUI_ENABLED=true",
         ],
-        "docs": [
-            {
-                "label": "完整指南：WebUI 与 API",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#webui-与-api-服务",
-            },
-            {
-                "label": "云服务器访问 WebUI",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/deploy-webui-cloud.md",
-            },
-        ],
         "warning_codes": ["restart_required"],
     },
     "WEBUI_AUTO_BUILD": {
@@ -3353,16 +2719,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "WEBUI_AUTO_BUILD=true",
             "WEBUI_AUTO_BUILD=false",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：WebUI 与 API",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#webui-与-api-服务",
-            },
-            {
-                "label": "云服务器访问 WebUI",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/deploy-webui-cloud.md",
-            },
         ],
         "warning_codes": ["restart_required", "requires_built_web_assets"],
     },
@@ -3384,16 +2740,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "WEBUI_HOST=127.0.0.1",
             "WEBUI_HOST=0.0.0.0",
         ],
-        "docs": [
-            {
-                "label": "云服务器访问 WebUI",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/deploy-webui-cloud.md",
-            },
-            {
-                "label": "完整指南：WebUI 与 API",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#webui-与-api-服务",
-            },
-        ],
         "warning_codes": ["public_bind_requires_auth", "restart_required"],
     },
     "WEBUI_PORT": {
@@ -3414,16 +2760,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "WEBUI_PORT=8000",
             "WEBUI_PORT=18000",
         ],
-        "docs": [
-            {
-                "label": "云服务器访问 WebUI",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/deploy-webui-cloud.md",
-            },
-            {
-                "label": "完整指南：WebUI 与 API",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#webui-与-api-服务",
-            },
-        ],
         "warning_codes": ["port_mapping_required", "restart_required"],
     },
     "RUN_IMMEDIATELY": {
@@ -3443,12 +2779,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "RUN_IMMEDIATELY=true",
             "RUN_IMMEDIATELY=false",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：其他配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#其他配置",
-            },
         ],
         "warning_codes": ["restart_required"],
     },
@@ -3471,12 +2801,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "SCHEDULE_TIME=18:00",
             "SCHEDULE_RUN_IMMEDIATELY=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：其他配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#其他配置",
-            },
-        ],
         "warning_codes": ["restart_required"],
     },
     "ADMIN_AUTH_ENABLED": {
@@ -3496,16 +2820,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "ADMIN_AUTH_ENABLED=true",
             "python -m src.auth reset_password",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：其他配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#其他配置",
-            },
-            {
-                "label": "云服务器访问 WebUI",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/deploy-webui-cloud.md",
-            },
         ],
         "warning_codes": ["public_webui_requires_auth", "auth_settings_endpoint_required"],
     },
@@ -3527,16 +2841,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "TRUST_X_FORWARDED_FOR=false",
             "TRUST_X_FORWARDED_FOR=true",
         ],
-        "docs": [
-            {
-                "label": "完整指南：其他配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#其他配置",
-            },
-            {
-                "label": "云服务器访问 WebUI",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/deploy-webui-cloud.md",
-            },
-        ],
         "warning_codes": ["trusted_proxy_only"],
     },
     "SCHEDULE_RUN_IMMEDIATELY": {
@@ -3556,12 +2860,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "SCHEDULE_RUN_IMMEDIATELY=true",
             "SCHEDULE_RUN_IMMEDIATELY=false",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：其他配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#其他配置",
-            },
         ],
         "warning_codes": ["restart_required"],
     },
@@ -3583,12 +2881,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "TRADING_DAY_CHECK_ENABLED=true",
             "TRADING_DAY_CHECK_ENABLED=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：其他配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#其他配置",
-            },
-        ],
         "warning_codes": ["force_run_override"],
     },
     "MARKET_REVIEW_ENABLED": {
@@ -3608,12 +2900,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "MARKET_REVIEW_ENABLED=true",
             "MARKET_REVIEW_REGION=cn",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -3635,12 +2921,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "DAILY_MARKET_CONTEXT_ENABLED=true",
             "DAILY_MARKET_CONTEXT_ENABLED=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "MARKET_REVIEW_REGION": {
@@ -3661,12 +2941,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "MARKET_REVIEW_REGION=cn",
             "MARKET_REVIEW_REGION=jp",
             "MARKET_REVIEW_REGION=both",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -3691,12 +2965,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "MARKET_REVIEW_COLOR_SCHEME=green_up",
             "MARKET_REVIEW_COLOR_SCHEME=red_up",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "MAX_WORKERS": {
@@ -3717,12 +2985,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "MAX_WORKERS=3",
             "MAX_WORKERS=5",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "ANALYSIS_DELAY": {
@@ -3742,12 +3004,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "ANALYSIS_DELAY=0",
             "ANALYSIS_DELAY=5",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -3770,16 +3026,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "SAVE_CONTEXT_SNAPSHOT=false",
             "python main.py --no-context-snapshot",
         ],
-        "docs": [
-            {
-                "label": "AnalysisContextPack P6 文档、迁移与回滚",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/analysis-context-pack.md#p6-文档迁移与回滚",
-            },
-            {
-                "label": "完整指南：其他配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#其他配置",
-            },
-        ],
         "warning_codes": [],
     },
     "DEBUG": {
@@ -3800,12 +3046,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "DEBUG=true",
             "DEBUG=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "BACKTEST_ENABLED": {
@@ -3825,12 +3065,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "BACKTEST_ENABLED=true",
             "BACKTEST_ENABLED=false",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：回测配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#回测功能",
-            },
         ],
         "warning_codes": [],
     },
@@ -3853,12 +3087,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "BACKTEST_MIN_AGE_DAYS=14",
             "BACKTEST_NEUTRAL_BAND_PCT=2.0",
         ],
-        "docs": [
-            {
-                "label": "完整指南：回测配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#回测功能",
-            },
-        ],
         "warning_codes": [],
     },
     "BACKTEST_MIN_AGE_DAYS": {
@@ -3879,12 +3107,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "BACKTEST_MIN_AGE_DAYS=14",
             "BACKTEST_EVAL_WINDOW_DAYS=10",
         ],
-        "docs": [
-            {
-                "label": "完整指南：回测配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#回测功能",
-            },
-        ],
         "warning_codes": [],
     },
     "BACKTEST_ENGINE_VERSION": {
@@ -3903,12 +3125,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "help_key": "settings.backtest.BACKTEST_ENGINE_VERSION",
         "examples": [
             "BACKTEST_ENGINE_VERSION=v1",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：回测配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#回测功能",
-            },
         ],
         "warning_codes": [],
     },
@@ -3930,12 +3146,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "BACKTEST_NEUTRAL_BAND_PCT=2.0",
             "BACKTEST_EVAL_WINDOW_DAYS=10",
         ],
-        "docs": [
-            {
-                "label": "完整指南：回测配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#回测功能",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_MODE": {
@@ -3955,12 +3165,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "AGENT_MODE=true",
             "AGENT_MODE=false",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -3987,12 +3191,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_BACKEND=litellm",
             "AGENT_BACKEND=codex_app_server",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_GENERATION_BACKEND": {
@@ -4016,12 +3214,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_GENERATION_BACKEND=auto",
             "AGENT_GENERATION_BACKEND=litellm",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_MAX_STEPS": {
@@ -4041,12 +3233,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             f"AGENT_MAX_STEPS={AGENT_MAX_STEPS_DEFAULT}",
             "AGENT_MAX_STEPS=25",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -4069,12 +3255,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_SKILLS=bull_trend,mean_reversion",
             "AGENT_SKILLS=all",
         ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_SKILL_DIR": {
@@ -4095,12 +3275,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_SKILL_DIR=strategies",
             "AGENT_SKILL_DIR=my_strategies",
         ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_NL_ROUTING": {
@@ -4120,12 +3294,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "AGENT_NL_ROUTING=true",
             "AGENT_NL_ROUTING=false",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -4149,12 +3317,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "AGENT_ARCH=single",
             "AGENT_ARCH=multi",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -4181,12 +3343,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_ORCHESTRATOR_MODE=standard",
             "AGENT_ORCHESTRATOR_MODE=full",
         ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_ORCHESTRATOR_TIMEOUT_S": {
@@ -4206,12 +3362,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "AGENT_ORCHESTRATOR_TIMEOUT_S=600",
             "AGENT_ORCHESTRATOR_TIMEOUT_S=0",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -4233,12 +3383,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_RISK_OVERRIDE=true",
             "AGENT_RISK_OVERRIDE=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_SKILL_CONCURRENCY": {
@@ -4258,12 +3402,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "AGENT_SKILL_CONCURRENCY=3",
             "AGENT_SKILL_CONCURRENCY=4",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -4285,12 +3423,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_DEEP_RESEARCH_BUDGET=30000",
             "AGENT_DEEP_RESEARCH_BUDGET=50000",
         ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_DEEP_RESEARCH_TIMEOUT": {
@@ -4310,12 +3442,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "AGENT_DEEP_RESEARCH_TIMEOUT=180",
             "AGENT_DEEP_RESEARCH_TIMEOUT=300",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -4337,12 +3463,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_MEMORY_ENABLED=true",
             "AGENT_MEMORY_ENABLED=false",
         ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_SKILL_AUTOWEIGHT": {
@@ -4362,12 +3482,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "AGENT_SKILL_AUTOWEIGHT=true",
             "AGENT_SKILL_AUTOWEIGHT=false",
-        ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -4392,12 +3506,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_SKILL_ROUTING=auto",
             "AGENT_SKILL_ROUTING=manual",
         ],
-        "docs": [
-            {
-                "label": "完整指南：Agent 配置",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_CONTEXT_COMPRESSION_ENABLED": {
@@ -4417,16 +3525,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "AGENT_CONTEXT_COMPRESSION_ENABLED=false",
             "AGENT_CONTEXT_COMPRESSION_ENABLED=true",
-        ],
-        "docs": [
-            {
-                "label": "LLM 配置指南：问股可见对话上下文压缩",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md#问股可见对话上下文压缩",
-            },
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -4453,16 +3551,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_CONTEXT_COMPRESSION_PROFILE=cost",
             "AGENT_CONTEXT_COMPRESSION_PROFILE=long_context_raw_first",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南：问股可见对话上下文压缩",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md#问股可见对话上下文压缩",
-            },
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_CONTEXT_COMPRESSION_TRIGGER_TOKENS": {
@@ -4482,16 +3570,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "AGENT_CONTEXT_COMPRESSION_TRIGGER_TOKENS=",
             "AGENT_CONTEXT_COMPRESSION_TRIGGER_TOKENS=12000",
-        ],
-        "docs": [
-            {
-                "label": "LLM 配置指南：问股可见对话上下文压缩",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md#问股可见对话上下文压缩",
-            },
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
         ],
         "warning_codes": [],
     },
@@ -4513,16 +3591,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_CONTEXT_PROTECTED_TURNS=",
             "AGENT_CONTEXT_PROTECTED_TURNS=4",
         ],
-        "docs": [
-            {
-                "label": "LLM 配置指南：问股可见对话上下文压缩",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md#问股可见对话上下文压缩",
-            },
-            {
-                "label": "完整指南：环境变量完整列表",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_EVENT_MONITOR_ENABLED": {
@@ -4543,12 +3611,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "AGENT_EVENT_MONITOR_ENABLED=true",
             "AGENT_EVENT_MONITOR_INTERVAL_MINUTES=5",
         ],
-        "docs": [
-            {
-                "label": "告警中心文档",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/alerts.md",
-            },
-        ],
         "warning_codes": [],
     },
     "AGENT_EVENT_MONITOR_INTERVAL_MINUTES": {
@@ -4568,12 +3630,6 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "examples": [
             "AGENT_EVENT_MONITOR_INTERVAL_MINUTES=5",
             "AGENT_EVENT_MONITOR_INTERVAL_MINUTES=15",
-        ],
-        "docs": [
-            {
-                "label": "告警中心文档",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/alerts.md",
-            },
         ],
         "warning_codes": [],
     },
@@ -4600,61 +3656,9 @@ _FIELD_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             'AGENT_EVENT_ALERT_RULES_JSON=[{"alert_type":"price_cross","stock_code":"600519","direction":"above","price":1800}]',
             'AGENT_EVENT_ALERT_RULES_JSON=[{"alert_type":"volume_spike","stock_code":"300750","multiplier":2.5}]',
         ],
-        "docs": [
-            {
-                "label": "告警中心文档",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/alerts.md",
-            },
-        ],
         "warning_codes": ["legacy_json_only_basic_rules"],
     },
 }
-
-_DOC_FULL_GUIDE_ENV = [
-    {
-        "label": "完整指南：环境变量完整列表",
-        "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#环境变量完整列表",
-    },
-]
-
-_DOC_FULL_GUIDE_SEARCH = [
-    {
-        "label": "完整指南：搜索服务配置",
-        "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#搜索服务配置",
-    },
-]
-
-_DOC_FULL_GUIDE_DATA_SOURCE = [
-    {
-        "label": "完整指南：数据源配置",
-        "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#数据源配置",
-    },
-]
-
-_DOC_FULL_GUIDE_NOTIFICATION = [
-    {
-        "label": "完整指南：通知渠道配置",
-        "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#通知渠道详细配置",
-    },
-]
-
-_DOC_LLM_CONFIG = [
-    {
-        "label": "LLM 配置指南",
-        "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/LLM_CONFIG_GUIDE.md",
-    },
-    {
-        "label": "LLM 服务商配置速查",
-        "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/llm-providers.md",
-    },
-]
-
-_DOC_CUSTOM_WEBHOOK = [
-    {
-        "label": "完整指南：自定义 Webhook",
-        "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/full-guide.md#自定义-webhook",
-    },
-]
 
 _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
     "ANSPIRE_LLM_ENABLED": {
@@ -4663,7 +3667,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "ANSPIRE_LLM_ENABLED=true",
             "ANSPIRE_API_KEYS=your_anspire_key",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": [],
     },
     "ANSPIRE_LLM_BASE_URL": {
@@ -4672,7 +3675,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "ANSPIRE_LLM_BASE_URL=https://open-gateway.anspire.cn/v6",
             "ANSPIRE_LLM_BASE_URL=https://open-gateway.anspire.ai/v6",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["base_url_must_match_provider"],
     },
     "ANSPIRE_LLM_MODEL": {
@@ -4681,7 +3683,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "ANSPIRE_LLM_MODEL=Doubao-Seed-2.0-lite",
             "LITELLM_MODEL=openai/Doubao-Seed-2.0-lite",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": [],
     },
     "DEEPSEEK_API_KEYS": {
@@ -4690,7 +3691,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "DEEPSEEK_API_KEYS=sk-xxxx,sk-yyyy",
             "LITELLM_MODEL=deepseek/deepseek-v4-flash",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["secret_value", "comma_separated_keys"],
     },
     "GEMINI_API_KEYS": {
@@ -4699,7 +3699,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "GEMINI_API_KEYS=your_gemini_key_1,your_gemini_key_2",
             "LITELLM_MODEL=gemini/gemini-3.1-pro-preview",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["secret_value", "comma_separated_keys"],
     },
     "GEMINI_MODEL": {
@@ -4708,7 +3707,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "GEMINI_MODEL=gemini-3.1-pro-preview",
             "LITELLM_MODEL=gemini/gemini-3.1-pro-preview",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["legacy_provider_setting"],
     },
     "GEMINI_MODEL_FALLBACK": {
@@ -4717,7 +3715,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "GEMINI_MODEL_FALLBACK=gemini-3-flash-preview",
             "LITELLM_FALLBACK_MODELS=gemini/gemini-3-flash-preview",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["legacy_provider_setting"],
     },
     "GEMINI_TEMPERATURE": {
@@ -4726,7 +3723,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "GEMINI_TEMPERATURE=0.7",
             "LLM_TEMPERATURE=0.7",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["legacy_provider_setting"],
     },
     "OPENAI_API_KEYS": {
@@ -4735,7 +3731,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "OPENAI_API_KEYS=sk-xxxx,sk-yyyy",
             "OPENAI_BASE_URL=https://api.example.com/v1",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["secret_value", "comma_separated_keys"],
     },
     "OPENAI_MODEL": {
@@ -4744,7 +3739,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "OPENAI_MODEL=gpt-5.5",
             "LITELLM_MODEL=openai/gpt-5.5",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["legacy_provider_setting"],
     },
     "OPENAI_VISION_MODEL": {
@@ -4753,7 +3747,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "OPENAI_VISION_MODEL=gpt-5.5",
             "VISION_MODEL=openai/gpt-5.5",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["legacy_provider_setting"],
     },
     "OPENAI_TEMPERATURE": {
@@ -4762,7 +3755,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "OPENAI_TEMPERATURE=0.7",
             "LLM_TEMPERATURE=0.7",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["legacy_provider_setting"],
     },
     "ANTHROPIC_API_KEYS": {
@@ -4771,7 +3763,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "ANTHROPIC_API_KEYS=sk-ant-xxxx,sk-ant-yyyy",
             "LITELLM_MODEL=anthropic/claude-sonnet-4-6",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["secret_value", "comma_separated_keys"],
     },
     "ANTHROPIC_MODEL": {
@@ -4780,7 +3771,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "ANTHROPIC_MODEL=claude-sonnet-4-6",
             "LITELLM_MODEL=anthropic/claude-sonnet-4-6",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["legacy_provider_setting"],
     },
     "ANTHROPIC_TEMPERATURE": {
@@ -4789,7 +3779,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "ANTHROPIC_TEMPERATURE=0.7",
             "LLM_TEMPERATURE=0.7",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["legacy_provider_setting"],
     },
     "ANTHROPIC_MAX_TOKENS": {
@@ -4797,7 +3786,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "ANTHROPIC_MAX_TOKENS=8192",
         ],
-        "docs": _DOC_LLM_CONFIG,
         "warning_codes": ["legacy_provider_setting"],
     },
     "TICKFLOW_API_KEY": {
@@ -4805,48 +3793,40 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "TICKFLOW_API_KEY=your_tickflow_key",
         ],
-        "docs": _DOC_FULL_GUIDE_DATA_SOURCE,
         "warning_codes": ["secret_value"],
     },
     "TICKFLOW_PRIORITY": {
         "help_key": "settings.data_source.TICKFLOW_PRIORITY",
         "examples": ["TICKFLOW_PRIORITY=2"],
-        "docs": _DOC_FULL_GUIDE_DATA_SOURCE,
     },
     "MX_APIKEY": {
         "help_key": "settings.data_source.MX_APIKEY",
         "examples": [
             "MX_APIKEY=mkt_your_miaoxiang_key",
         ],
-        "docs": _DOC_FULL_GUIDE_DATA_SOURCE,
         "warning_codes": ["secret_value"],
     },
     "MX_PRIORITY": {
         "help_key": "settings.data_source.MX_PRIORITY",
         "examples": ["MX_PRIORITY=6"],
-        "docs": _DOC_FULL_GUIDE_DATA_SOURCE,
     },
     "TICKFLOW_KLINE_ADJUST": {
         "help_key": "settings.data_source.TICKFLOW_KLINE_ADJUST",
         "examples": ["TICKFLOW_KLINE_ADJUST=none"],
-        "docs": _DOC_FULL_GUIDE_DATA_SOURCE,
     },
     "TICKFLOW_BATCH_DAILY_ENABLED": {
         "help_key": "settings.data_source.TICKFLOW_BATCH_DAILY_ENABLED",
         "examples": ["TICKFLOW_BATCH_DAILY_ENABLED=true"],
-        "docs": _DOC_FULL_GUIDE_DATA_SOURCE,
     },
     "TICKFLOW_BATCH_SIZE": {
         "help_key": "settings.data_source.TICKFLOW_BATCH_SIZE",
         "examples": ["TICKFLOW_BATCH_SIZE=100"],
-        "docs": _DOC_FULL_GUIDE_DATA_SOURCE,
     },
     "SERPAPI_API_KEYS": {
         "help_key": "settings.data_source.search_api_keys",
         "examples": [
             "SERPAPI_API_KEYS=serpapi_key_1,serpapi_key_2",
         ],
-        "docs": _DOC_FULL_GUIDE_SEARCH,
         "warning_codes": ["secret_value", "comma_separated_keys"],
     },
     "BRAVE_API_KEYS": {
@@ -4854,7 +3834,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "BRAVE_API_KEYS=brave_key_1,brave_key_2",
         ],
-        "docs": _DOC_FULL_GUIDE_SEARCH,
         "warning_codes": ["secret_value", "comma_separated_keys"],
     },
     "BOCHA_API_KEYS": {
@@ -4862,7 +3841,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "BOCHA_API_KEYS=bocha_key_1,bocha_key_2",
         ],
-        "docs": _DOC_FULL_GUIDE_SEARCH,
         "warning_codes": ["secret_value", "comma_separated_keys"],
     },
     "MINIMAX_API_KEYS": {
@@ -4870,7 +3848,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "MINIMAX_API_KEYS=minimax_key_1,minimax_key_2",
         ],
-        "docs": _DOC_FULL_GUIDE_SEARCH,
         "warning_codes": ["secret_value", "comma_separated_keys"],
     },
     "SEARXNG_PUBLIC_INSTANCES_ENABLED": {
@@ -4879,7 +3856,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "SEARXNG_PUBLIC_INSTANCES_ENABLED=false",
             "SEARXNG_PUBLIC_INSTANCES_ENABLED=true",
         ],
-        "docs": _DOC_FULL_GUIDE_SEARCH,
         "warning_codes": ["public_instance_stability"],
     },
     "BIAS_THRESHOLD": {
@@ -4888,7 +3864,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "BIAS_THRESHOLD=5.0",
             "BIAS_THRESHOLD=8.0",
         ],
-        "docs": _DOC_FULL_GUIDE_DATA_SOURCE,
         "warning_codes": [],
     },
     "PYTDX_HOST": {
@@ -4897,7 +3872,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "PYTDX_HOST=119.147.212.81",
             "PYTDX_PORT=7709",
         ],
-        "docs": _DOC_FULL_GUIDE_DATA_SOURCE,
         "warning_codes": [],
     },
     "PYTDX_PORT": {
@@ -4906,7 +3880,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "PYTDX_PORT=7709",
             "PYTDX_HOST=119.147.212.81",
         ],
-        "docs": _DOC_FULL_GUIDE_DATA_SOURCE,
         "warning_codes": [],
     },
     "PYTDX_SERVERS": {
@@ -4914,7 +3887,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "PYTDX_SERVERS=119.147.212.81:7709,119.147.212.81:7711",
         ],
-        "docs": _DOC_FULL_GUIDE_DATA_SOURCE,
         "warning_codes": ["overrides_pytdx_host_port"],
     },
     "DINGTALK_APP_KEY": {
@@ -4923,7 +3895,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "DINGTALK_APP_KEY=your_dingtalk_app_key",
             "DINGTALK_APP_SECRET=your_dingtalk_app_secret",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["secret_value"],
     },
     "DINGTALK_APP_SECRET": {
@@ -4931,7 +3902,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "DINGTALK_APP_SECRET=your_dingtalk_app_secret",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["secret_value"],
     },
     "PUSHPLUS_TOKEN": {
@@ -4940,7 +3910,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "PUSHPLUS_TOKEN=your_pushplus_token",
             "PUSHPLUS_TOPIC=your_pushplus_topic",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["secret_value"],
     },
     "CUSTOM_WEBHOOK_BEARER_TOKEN": {
@@ -4948,7 +3917,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "CUSTOM_WEBHOOK_BEARER_TOKEN=your_bearer_token",
         ],
-        "docs": _DOC_CUSTOM_WEBHOOK,
         "warning_codes": ["secret_value"],
     },
     "CUSTOM_WEBHOOK_BODY_TEMPLATE": {
@@ -4957,20 +3925,12 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             'CUSTOM_WEBHOOK_BODY_TEMPLATE={"msg_type":"text","content":$content_json}',
             'CUSTOM_WEBHOOK_BODY_TEMPLATE={"title":$title_json,"text":$content_json}',
         ],
-        "docs": _DOC_CUSTOM_WEBHOOK,
         "warning_codes": ["json_template_must_render_object"],
     },
     "FEISHU_WEBHOOK_SECRET": {
         "help_key": "settings.notification.FEISHU_WEBHOOK_URL",
         "examples": [
             "FEISHU_WEBHOOK_SECRET=your_feishu_webhook_secret",
-        ],
-        "docs": [
-            *_DOC_FULL_GUIDE_NOTIFICATION,
-            {
-                "label": "飞书机器人配置专题",
-                "href": "https://github.com/ZhuLinsen/daily_stock_analysis/blob/main/docs/bot/feishu-bot-config.md",
-            },
         ],
         "warning_codes": ["secret_value"],
     },
@@ -4979,7 +3939,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "FEISHU_WEBHOOK_KEYWORD=股票日报",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": [],
     },
     "FEISHU_APP_ID": {
@@ -4988,7 +3947,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "FEISHU_APP_ID=cli_xxxxx",
             "FEISHU_APP_SECRET=your_feishu_app_secret",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["not_webhook_delivery"],
     },
     "FEISHU_APP_SECRET": {
@@ -4996,7 +3954,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "FEISHU_APP_SECRET=your_feishu_app_secret",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["secret_value", "not_webhook_delivery"],
     },
     "TELEGRAM_MESSAGE_THREAD_ID": {
@@ -5004,7 +3961,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "TELEGRAM_MESSAGE_THREAD_ID=123",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": [],
     },
     "DISCORD_MAIN_CHANNEL_ID": {
@@ -5012,7 +3968,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "DISCORD_MAIN_CHANNEL_ID=123456789012345678",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": [],
     },
     "DISCORD_INTERACTIONS_PUBLIC_KEY": {
@@ -5020,7 +3975,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "DISCORD_INTERACTIONS_PUBLIC_KEY=your_discord_public_key",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": [],
     },
     "SLACK_CHANNEL_ID": {
@@ -5028,7 +3982,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "SLACK_CHANNEL_ID=C0123456789",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": [],
     },
     "SLACK_WEBHOOK_URL": {
@@ -5036,7 +3989,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "SLACK_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzz",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["webhook_secret_value"],
     },
     "PUSHOVER_USER_KEY": {
@@ -5045,7 +3997,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "PUSHOVER_USER_KEY=your_pushover_user_key",
             "PUSHOVER_API_TOKEN=your_pushover_api_token",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["secret_value"],
     },
     "PUSHOVER_API_TOKEN": {
@@ -5053,7 +4004,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "PUSHOVER_API_TOKEN=your_pushover_api_token",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["secret_value"],
     },
     "NTFY_URL": {
@@ -5062,7 +4012,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "NTFY_URL=https://ntfy.sh/your_topic",
             "NTFY_TOKEN=your_ntfy_token",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["webhook_secret_value"],
     },
     "NTFY_TOKEN": {
@@ -5070,7 +4019,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "NTFY_TOKEN=your_ntfy_token",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["secret_value"],
     },
     "GOTIFY_URL": {
@@ -5079,7 +4027,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "GOTIFY_URL=https://gotify.example.com",
             "GOTIFY_TOKEN=your_gotify_token",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["webhook_secret_value"],
     },
     "GOTIFY_TOKEN": {
@@ -5087,7 +4034,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "GOTIFY_TOKEN=your_gotify_token",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["secret_value"],
     },
     "PUSHPLUS_TOPIC": {
@@ -5095,7 +4041,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "PUSHPLUS_TOPIC=your_pushplus_topic",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": [],
     },
     "SERVERCHAN3_SENDKEY": {
@@ -5103,7 +4048,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "SERVERCHAN3_SENDKEY=your_serverchan3_sendkey",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["secret_value"],
     },
     "ASTRBOT_URL": {
@@ -5112,7 +4056,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
             "ASTRBOT_URL=https://astrbot.example.com/webhook",
             "ASTRBOT_TOKEN=your_astrbot_token",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["webhook_secret_value"],
     },
     "ASTRBOT_TOKEN": {
@@ -5120,7 +4063,6 @@ _FIELD_HELP_METADATA: Dict[str, Dict[str, Any]] = {
         "examples": [
             "ASTRBOT_TOKEN=your_astrbot_token",
         ],
-        "docs": _DOC_FULL_GUIDE_NOTIFICATION,
         "warning_codes": ["secret_value"],
     },
 }

@@ -2,7 +2,7 @@
 
 设置页配置帮助用于把配置项的关键说明放到 WebUI 内部，减少用户在设置页和文档之间反复切换。页面上仍保留短描述，详细说明通过配置项标题旁的 help icon 打开。
 
-本文只说明帮助系统的维护规则，不替代完整配置文档。配置语义、默认值、运行时优先级和排障细节仍以 `.env.example`、`docs/full-guide.md` 及对应专题文档为事实源。
+本文只说明帮助系统的维护规则，不替代完整配置文档。配置语义、默认值、运行时优先级和排障细节仍以 `.env.example` 及对应专题文档为事实源。
 
 ## 数据结构
 
@@ -73,7 +73,6 @@ Issue #1512 收口后，Web 设置页只展示后端配置注册表中的正式�
 新增或修改帮助文案时，优先从以下位置核对：
 
 1. `.env.example`：配置键名、默认值、样例格式和敏感占位符。
-2. `docs/full-guide.md`：主要配置说明、运行入口和部署上下文。
 3. `docs/LLM_CONFIG_GUIDE.md`、`docs/llm-providers.md`：LLM 优先级、Channels、provider/model、兼容边界和排障说明。
 4. 专题文档：例如 `docs/bot/feishu-bot-config.md`、`docs/deploy-webui-cloud.md`、`docs/desktop-package.md`。
 5. 代码实现和测试：当文档与代码不一致时，先以可执行实现为准，并同步修正文档。
