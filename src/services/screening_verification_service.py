@@ -229,7 +229,10 @@ class ScreeningVerificationService:
         except Exception as exc:  # noqa: BLE001 - 政策加成失败不阻断选股
             logger.warning("政策加成失败，按原始分数继续: %s", exc)
 
-        cooldown_days = _env_int("CN_COOLDOWN_TRADING_DAYS", 10)
+        # 10 → 5：组合实验（55 期、全市场）显示收益差异在噪声内，
+        # 但冷却 10 日的组合波动 1.673% 明显高于 5 日的 1.510%，
+        # 且 5 日胜率最高（49.1%）。5 个交易日仍能避免同一周内重复推荐。
+        cooldown_days = _env_int("CN_COOLDOWN_TRADING_DAYS", 5)
         max_per_industry = _env_int("CN_MAX_PER_INDUSTRY", 2)
 
         kept, dedupe_stats = filter_candidates(

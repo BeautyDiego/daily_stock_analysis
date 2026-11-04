@@ -652,6 +652,19 @@ def parse_arguments() -> argparse.Namespace:
         help='止盈倍数（×ATR），不填则用策略默认 4 倍'
     )
 
+    parser.add_argument(
+        '--portfolio-study',
+        action='store_true',
+        help='组合约束对比：行业上限（1/2/3/不限）对 5 只组合收益的影响'
+    )
+
+    parser.add_argument(
+        '--study-cooldown',
+        type=int,
+        default=0,
+        help='组合实验的冷却天数，默认 0（不冷却）'
+    )
+
     return parser.parse_args()
 
 
@@ -1696,6 +1709,7 @@ def _skips_stock_entry(args: argparse.Namespace, config: Config) -> bool:
         or getattr(args, "factor_layering", False)
         or getattr(args, "sync_universe", False)
         or getattr(args, "take_profit_study", False)
+        or getattr(args, "portfolio_study", False)
         or getattr(args, "market_review", False)
         or getattr(args, "serve_only", False)
         or getattr(args, "webui_only", False)
@@ -2228,6 +2242,20 @@ def main() -> int:
                     f"@{item.get('price')}（{item.get('reason')}）"
                 )
             return 0
+
+        # 模式0.23: 组合约束对比
+        if getattr(args, 'portfolio_study', False):
+            logger.info("模式: 组合约束对比")
+            from src.services.cn_tracker.portfolio_study import (
+                build_constraint_report,
+                compare_portfolio_constraints,
+            )
+
+            stats = compare_portfolio_constraints(
+                cooldown_days=int(getattr(args, 'study_cooldown', 0) or 0)
+            )
+            print(build_constraint_report(stats))
+            return 0 if not stats.get("error") else 1
 
         # 模式0.22: 止盈方式对比
         if getattr(args, 'take_profit_study', False):
