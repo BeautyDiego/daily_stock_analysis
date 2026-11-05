@@ -354,7 +354,10 @@ class ScreeningVerificationService:
                         factor_scores=_json_or_none(item.get("factor_scores")),
                         policy_hits=_json_or_none(item.get("policy_hits")),
                         dedupe_note=str(item.get("dedupe_note") or "")[:255] or None,
-                        strategy_version=str(item.get("strategy_version") or "")[:64] or None,
+                        strategy_version=(
+                            str(item.get("strategy_version") or _current_strategy_version())[:64]
+                            or None
+                        ),
                         industry=str(item.get("industry") or "")[:64] or None,
                     )
                 )
@@ -966,6 +969,25 @@ def _env_int(name: str, default: int, *, minimum: int = 1) -> int:
         logger.warning("环境变量 %s 不是整数（%r），已回退默认值 %s", name, raw, default)
         return default
     return max(minimum, value)
+
+
+def _current_strategy_version() -> str:
+    """读取当前策略版本号，用于按版本回溯调权前后的选股结果。"""
+    try:
+        import yaml
+        from pathlib import Path
+
+        path = (
+            Path(__file__).resolve().parent
+            / "screening"
+            / "strategies"
+            / "balanced_alpha.yaml"
+        )
+        with path.open("r", encoding="utf-8") as handle:
+            return str((yaml.safe_load(handle) or {}).get("version") or "")
+    except Exception as exc:  # noqa: BLE001 - 版本缺失不影响选股
+        logger.debug("读取策略版本失败: %s", exc)
+        return ""
 
 
 def _json_or_none(value: Any) -> Optional[str]:

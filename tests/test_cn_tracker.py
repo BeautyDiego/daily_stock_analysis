@@ -15,6 +15,7 @@ from src.services.cn_tracker.dedupe_filter import (
     recent_recommended_codes,
 )
 from src.services.cn_tracker.holding_tracker_service import (
+    _load_history,
     _score_review,
     build_review_report,
     ensure_tracked_positions,
@@ -311,6 +312,40 @@ class HoldingReviewTest(_DbTestCase):
         self.assertTrue(review["hard_exit"])
         self.assertEqual(review["advice"], "exit")
         self.assertLess(review["return_pct"], -8)
+
+    def test_load_history_tolerates_date_in_index(self):
+        """行情源把日期放在索引里时，不能让整批同步崩在 KeyError: 'date'。"""
+        import pandas as pd
+
+        frame = pd.DataFrame(
+            {
+                "open": [10.0] * 3,
+                "high": [10.5] * 3,
+                "low": [9.5] * 3,
+                "close": [10.2] * 3,
+                "volume": [1000] * 3,
+            },
+            index=pd.DatetimeIndex(
+                ["2026-10-28", "2026-10-29", "2026-10-30"], name="index"
+            ),
+        )
+        with patch(
+            "src.services.screening.daily.fetch_daily_history", return_value=frame
+        ):
+            result = _load_history("600016")
+
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result), 3)
+        self.assertIn("date", result.columns)
+
+    def test_load_history_returns_none_without_close_column(self):
+        import pandas as pd
+
+        frame = pd.DataFrame({"date": ["2026-10-30"], "volume": [1000]})
+        with patch(
+            "src.services.screening.daily.fetch_daily_history", return_value=frame
+        ):
+            self.assertIsNone(_load_history("600016"))
 
     def test_ensure_tracked_keeps_first_source_date(self):
         """每日同步持仓不能刷新首次入选日，否则持有天数永远归零。"""

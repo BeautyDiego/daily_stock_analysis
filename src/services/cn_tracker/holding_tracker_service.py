@@ -267,7 +267,12 @@ def sync_daily_history(
     saved = 0
     errors = 0
     for code in targets:
-        frame = _load_history(code, lookback_days=lookback_days)
+        try:
+            frame = _load_history(code, lookback_days=lookback_days)
+        except Exception as exc:  # noqa: BLE001 - 单只失败不能中断整批
+            errors += 1
+            logger.warning("日线获取失败 code=%s: %s", code, exc)
+            continue
         if frame is None or frame.empty:
             errors += 1
             continue
@@ -456,6 +461,32 @@ def _load_history(code: str, *, lookback_days: int = 60) -> Optional[pd.DataFram
         return None
 
     result = frame.copy()
+    if "date" not in result.columns:
+        # 上游行情源偶发返回不同结构（日期在索引里、或叫 trade_date）。
+        # 不能让一只票的结构异常拖垮整批同步（实测 11-04 因此整天日线缺失）。
+        renamed = False
+        for alias in ("trade_date", "Date", "datetime", "tradeDate"):
+            if alias in result.columns:
+                result = result.rename(columns={alias: "date"})
+                renamed = True
+                break
+        if not renamed and isinstance(result.index, pd.DatetimeIndex):
+            result = result.reset_index().rename(columns={"index": "date"})
+            renamed = True
+        if not renamed or "date" not in result.columns:
+            logger.warning(
+                "复盘取日线缺少日期列 code=%s cols=%s", code, list(result.columns)
+            )
+            return None
+    if "close" not in result.columns:
+        for alias in ("Close", "close_price", "adj_close"):
+            if alias in result.columns:
+                result = result.rename(columns={alias: "close"})
+                break
+        if "close" not in result.columns:
+            logger.warning("复盘取日线缺少收盘价列 code=%s", code)
+            return None
+
     result["date"] = pd.to_datetime(result["date"], errors="coerce")
     result = result.dropna(subset=["date"]).sort_values("date")
     for column in ("open", "high", "low", "close", "volume"):

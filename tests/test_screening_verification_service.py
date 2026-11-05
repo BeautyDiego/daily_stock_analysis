@@ -27,6 +27,16 @@ def _frame(rows: list[tuple[str, float, float]]) -> pd.DataFrame:
     )
 
 
+class StrategyVersionTestCase(unittest.TestCase):
+    def test_current_strategy_version_reads_yaml(self):
+        """选股落库必须带上策略版本，否则无法回溯调权前后。"""
+        from src.services.screening_verification_service import (
+            _current_strategy_version,
+        )
+
+        self.assertTrue(_current_strategy_version())
+
+
 class _FakeScreening:
     """Minimal ScreeningService stub returning fixed candidates per market."""
 
