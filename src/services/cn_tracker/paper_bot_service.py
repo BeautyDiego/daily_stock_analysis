@@ -170,6 +170,14 @@ def plan_orders(
     """
     manager = db or DatabaseManager.get_instance()
     trade_date = as_of or date.today()
+    if not _is_trading_day(trade_date):
+        # cron 只排周末，法定节假日仍会触发；休市日行情返回昨收，
+        # 若照常成交会把虚假交易写进账本并打乱 T+1 起算日
+        logger.info("非交易日，跳过模拟盘: %s", trade_date)
+        return {
+            "trade_date": trade_date.isoformat(),
+            "skipped": ["non_trading_day"],
+        }
     account = ensure_paper_account(db=manager)
     account_id = int(account["id"])
     portfolio = PortfolioService()
@@ -236,7 +244,10 @@ def plan_orders(
     if signal_date is None:
         result["skipped"].append("no_signal")
         return result
-    if not ignore_age and (trade_date - signal_date).days > MAX_SIGNAL_AGE_DAYS:
+    # 按交易日计时效：长假后首个交易日往往已过 10+ 自然日，
+    # 但实际只隔 1~2 个交易日，用自然日会误判 stale_signal
+    signal_age = _elapsed_trading_days(signal_date, trade_date)
+    if not ignore_age and signal_age > MAX_SIGNAL_AGE_DAYS:
         result["skipped"].append(f"stale_signal:{signal_date}")
         return result
 
@@ -337,6 +348,14 @@ def execute_open(
     """
     manager = db or DatabaseManager.get_instance()
     trade_date = as_of or date.today()
+    if not _is_trading_day(trade_date):
+        # cron 只排周末，法定节假日仍会触发；休市日行情返回昨收，
+        # 若照常成交会把虚假交易写进账本并打乱 T+1 起算日
+        logger.info("非交易日，跳过模拟盘: %s", trade_date)
+        return {
+            "trade_date": trade_date.isoformat(),
+            "skipped": ["non_trading_day"],
+        }
     account = ensure_paper_account(db=manager)
     account_id = int(account["id"])
     portfolio = PortfolioService()
@@ -375,6 +394,13 @@ def execute_open(
         return result
 
     quotes = fetch_realtime_prices([order["code"] for order in orders])
+    if not quotes:
+        # 网络抖动会把整批订单标成 cancelled 且再也无法恢复；
+        # 无报价属于技术失败，保留 pending 供下次执行自动重试
+        logger.warning("实时报价为空，%s 笔订单保留 pending 待重试", len(orders))
+        if notify:
+            notify_open_brief(result, db=manager)
+        return result
 
     # 先 replay 出当日现金：现金由流水决定，若沿用昨日快照会算出透支
     portfolio.get_portfolio_snapshot(
@@ -390,8 +416,10 @@ def execute_open(
             quote = quotes.get(order["code"]) or {}
             price = quote.get("price")
             if not price or float(price) <= 0:
-                _mark_order(manager, order["id"], "cancelled", note="无实时报价")
-                result["cancelled"].append({**order, "why": "无实时报价"})
+                _defer_order(manager, order["id"], "无实时报价，保留 pending 待重试")
+                result.setdefault("deferred", []).append(
+                    {**order, "why": "无实时报价（保留 pending）"}
+                )
                 continue
 
             price = float(price)
@@ -461,26 +489,48 @@ def execute_open(
                     dedup_hash=f"bot:{account_id}:{trade_date.isoformat()}:{order['code']}:{side}",
                     note=str(order.get("reason") or "")[:64] or None,
                 )
-                _mark_order(manager, order["id"], "filled", filled_price=fill_price)
-                if side == "buy":
-                    cash_available -= amount + fee
-                else:
-                    # 卖出回款必须计入可用现金，否则「先卖后买」只是注释
-                    cash_available += amount - round(fee, 2) - round(tax, 2)
-                result["filled"].append(
-                    {
-                        "code": order["code"],
-                        "name": order.get("name"),
-                        "side": side,
-                        "quantity": quantity,
-                        "price": fill_price,
-                        "cost": position_cost or None,
-                        "reason": order.get("reason"),
-                    }
-                )
             except Exception as exc:  # noqa: BLE001 - 单笔失败不影响其它
-                logger.warning("模拟盘开盘成交失败 %s %s: %s", side, order["code"], exc)
-                _mark_order(manager, order["id"], "cancelled", note=str(exc)[:120])
+                if _is_duplicate_trade(exc):
+                    # 账本里已有这笔成交（上次状态同步失败），收敛为已处理
+                    _mark_order(manager, order["id"], "filled", filled_price=fill_price)
+                    logger.info("订单 %s 此前已成交，按已处理收敛", order["id"])
+                else:
+                    logger.warning(
+                        "模拟盘开盘成交失败 %s %s: %s", side, order["code"], exc
+                    )
+                    _defer_order(manager, order["id"], f"成交失败：{str(exc)[:120]}")
+                    result.setdefault("deferred", []).append(
+                        {**order, "why": "成交失败（保留 pending）"}
+                    )
+                continue
+
+            try:
+                _mark_order(manager, order["id"], "filled", filled_price=fill_price)
+            except Exception as exc:  # noqa: BLE001
+                # 账本已成交，订单保留 pending；下次执行由 dedup_hash 冲突收敛。
+                # 这里绝不能标 cancelled，否则账实永久不符。
+                logger.error("账本已成交但订单状态同步失败: %s", exc)
+
+            if side == "buy":
+                cash_available -= amount + fee
+            else:
+                # 卖出回款必须计入可用现金，否则「先卖后买」只是注释
+                cash_available += amount - round(fee, 2) - round(tax, 2)
+                remaining = _load_positions(manager, account_id).get(order["code"])
+                if not remaining or float(remaining.get("quantity") or 0) < LOT_SIZE:
+                    # 清仓后同步跟踪状态，避免 peak_price 跨持仓周期残留
+                    _close_tracked(manager, order["code"], trade_date, fill_price)
+            result["filled"].append(
+                {
+                    "code": order["code"],
+                    "name": order.get("name"),
+                    "side": side,
+                    "quantity": quantity,
+                    "price": fill_price,
+                    "cost": position_cost or None,
+                    "reason": order.get("reason"),
+                }
+            )
 
     # 同步跟踪表并结算当前权益
     _replay_and_sync(manager, account_id, trade_date, portfolio)
@@ -508,6 +558,14 @@ def watch_intraday(
     """盘中按实时价检查止损与止盈，触发即清仓。"""
     manager = db or DatabaseManager.get_instance()
     trade_date = as_of or date.today()
+    if not _is_trading_day(trade_date):
+        # cron 只排周末，法定节假日仍会触发；休市日行情返回昨收，
+        # 若照常成交会把虚假交易写进账本并打乱 T+1 起算日
+        logger.info("非交易日，跳过模拟盘: %s", trade_date)
+        return {
+            "trade_date": trade_date.isoformat(),
+            "skipped": ["non_trading_day"],
+        }
     account = ensure_paper_account(db=manager)
     account_id = int(account["id"])
     portfolio = PortfolioService()
@@ -619,6 +677,14 @@ def settle(
     """收盘估值：写快照、算当日盈亏，并推送收盘简报。"""
     manager = db or DatabaseManager.get_instance()
     trade_date = as_of or date.today()
+    if not _is_trading_day(trade_date):
+        # cron 只排周末，法定节假日仍会触发；休市日行情返回昨收，
+        # 若照常成交会把虚假交易写进账本并打乱 T+1 起算日
+        logger.info("非交易日，跳过模拟盘: %s", trade_date)
+        return {
+            "trade_date": trade_date.isoformat(),
+            "skipped": ["non_trading_day"],
+        }
     account = ensure_paper_account(db=manager)
     account_id = int(account["id"])
     portfolio = PortfolioService()
@@ -909,6 +975,51 @@ def _paper_account_id(manager: DatabaseManager) -> Optional[int]:
     return int(account.id) if account else None
 
 
+def _is_trading_day(day: date) -> bool:
+    """A 股是否交易日；日历不可用时退回周一~周五（不把节假日当交易日）。"""
+    try:
+        from src.core.trading_calendar import get_trading_dates
+
+        sessions = get_trading_dates("cn", day, day)
+        if sessions is not None:
+            return len(sessions) > 0
+    except Exception as exc:  # noqa: BLE001 - 日历不可用就退回自然日
+        logger.debug("交易日历不可用: %s", exc)
+    return day.weekday() < 5
+
+
+def _elapsed_trading_days(start: date, end: date) -> int:
+    """两个日期之间隔了多少个交易日（不含起始日）。"""
+    if end <= start:
+        return 0
+    try:
+        from src.core.trading_calendar import get_trading_dates
+
+        sessions = get_trading_dates("cn", start, end)
+        if sessions is not None:
+            return max(0, len(sessions) - 1)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("交易日历不可用: %s", exc)
+    return (end - start).days
+
+
+def _is_duplicate_trade(exc: Exception) -> bool:
+    """``dedup_hash`` 冲突 = 这笔成交此前已入账，应按「已处理」收敛。"""
+    return (
+        "conflict" in type(exc).__name__.lower()
+        or "dedup" in str(exc).lower()
+    )
+
+
+def _defer_order(manager: DatabaseManager, order_id: int, note: str) -> None:
+    """技术性失败：保留 pending 供下次重试，只记录原因，绝不标终态。"""
+    with manager.get_session() as session:
+        row = session.query(PaperOrder).filter(PaperOrder.id == order_id).first()
+        if row is not None and row.status == "pending":
+            row.note = note[:255]
+            session.commit()
+
+
 def _trailing_enabled() -> bool:
     """移动止盈开关，默认关闭。
 
@@ -1047,6 +1158,13 @@ def _mark_order(
         row = session.query(PaperOrder).filter(PaperOrder.id == order_id).first()
         if row is None:
             return
+        # 只允许从 pending 迁移：防止把已成交订单误标 cancelled，
+        # 也防止 filled 被后续重跑覆盖
+        if row.status != "pending" and status != "pending":
+            logger.warning(
+                "订单 %s 当前状态 %s，拒绝迁移到 %s", order_id, row.status, status
+            )
+            return
         row.status = status
         if filled_price is not None:
             row.filled_price = float(filled_price)
@@ -1091,6 +1209,14 @@ def trade_now(
     """
     manager = db or DatabaseManager.get_instance()
     trade_date = as_of or date.today()
+    if not _is_trading_day(trade_date):
+        # cron 只排周末，法定节假日仍会触发；休市日行情返回昨收，
+        # 若照常成交会把虚假交易写进账本并打乱 T+1 起算日
+        logger.info("非交易日，跳过模拟盘: %s", trade_date)
+        return {
+            "trade_date": trade_date.isoformat(),
+            "skipped": ["non_trading_day"],
+        }
 
     plan = plan_orders(
         as_of=trade_date, db=manager, allow_same_day=True, ignore_age=True
@@ -1236,9 +1362,13 @@ def _replay_and_sync(
     manager: DatabaseManager, account_id: int, trade_date: date, portfolio: PortfolioService
 ) -> None:
     """重放持仓并把实际持仓同步到跟踪表。"""
-    portfolio.get_portfolio_snapshot(
-        account_id=account_id, as_of=trade_date, include_realtime=False
-    )
+    try:
+        portfolio.get_portfolio_snapshot(
+            account_id=account_id, as_of=trade_date, include_realtime=False
+        )
+    except Exception as exc:  # noqa: BLE001 - 快照失败不能让整个执行流程崩溃
+        logger.warning("结算快照失败: %s", exc)
+        return
     try:
         from src.services.cn_tracker.paper_trading_service import _sync_tracked_holdings
 

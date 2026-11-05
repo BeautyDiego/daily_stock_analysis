@@ -287,6 +287,79 @@ class PaperBotTestCase(unittest.TestCase):
         self.assertEqual(len(stats["triggered"]), 1)
         self.assertIn("移动止盈", stats["triggered"][0]["reason"])
 
+    def test_execute_open_closes_tracked_on_full_exit(self):
+        """全部卖出后跟踪状态应置 closed，避免旧峰值带入下一次建仓。"""
+        trade_date = date(2026, 11, 4)
+        self._open_position("600016", date(2026, 11, 2), date(2026, 11, 3))
+        self._add_daily("600016", trade_date, close=3.6)
+        self._add_review("600016", trade_date, "exit")
+        plan_orders(as_of=trade_date, db=self.db)
+
+        payload = _tencent_payload(
+            "600016", price=3.6, prev_close=3.5, change_pct=2.8
+        )
+        with patch("requests.get", return_value=_FakeResponse(payload)):
+            execute_open(as_of=trade_date, db=self.db, notify=False)
+
+        with self.db.get_session() as session:
+            position = (
+                session.query(TrackedPosition)
+                .filter(TrackedPosition.code == "600016")
+                .order_by(TrackedPosition.id.desc())
+                .first()
+            )
+        self.assertEqual(position.status, "closed")
+
+    def test_plan_orders_skips_non_trading_day(self):
+        """cron 只排周末，法定节假日/周末必须显式跳过。"""
+        stats = plan_orders(as_of=date(2026, 11, 7), db=self.db)  # 周六
+        self.assertIn("non_trading_day", stats.get("skipped") or [])
+
+    def test_execute_open_keeps_orders_pending_without_quotes(self):
+        """网络抖动返回空报价时，订单不能被标成不可恢复的 cancelled。"""
+        trade_date = date(2026, 11, 3)
+        self._add_pick("600016", "民生银行", 3.5, date(2026, 11, 2), rank=1)
+        ensure_paper_account(initial_cash=20000, db=self.db)
+        plan_orders(as_of=trade_date, db=self.db)
+
+        with patch.object(
+            paper_bot_service, "fetch_realtime_prices", return_value={}
+        ):
+            execute_open(as_of=trade_date, db=self.db, notify=False)
+
+        with self.db.get_session() as session:
+            statuses = [row.status for row in session.query(PaperOrder).all()]
+        self.assertTrue(statuses)
+        self.assertTrue(all(status == "pending" for status in statuses))
+
+    def test_mark_order_cannot_downgrade_filled(self):
+        """已成交订单不能被后续失败误标为 cancelled。"""
+        trade_date = date(2026, 11, 3)
+        account = ensure_paper_account(initial_cash=20000, db=self.db)
+        paper_bot_service._upsert_order(
+            self.db,
+            int(account["id"]),
+            trade_date,
+            "600016",
+            "民生银行",
+            "buy",
+            100,
+            3.5,
+            "测试",
+        )
+        with self.db.get_session() as session:
+            order_id = session.query(PaperOrder).one().id
+
+        paper_bot_service._mark_order(
+            self.db, order_id, "filled", filled_price=3.55
+        )
+        paper_bot_service._mark_order(
+            self.db, order_id, "cancelled", note="误操作"
+        )
+
+        with self.db.get_session() as session:
+            self.assertEqual(session.query(PaperOrder).one().status, "filled")
+
     def test_execute_open_respects_t_plus_1(self):
         """当日买入的标的，当日复盘给出 exit 也不能在开盘执行卖出。"""
         trade_date = date(2026, 11, 3)
